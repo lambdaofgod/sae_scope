@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "WebSearch"
+      "WebSearch",
+      "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
+      "Bash(cat:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(uv run python:*)",
+      "Bash(.specify/scripts/bash/setup-plan.sh:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(.specify/scripts/bash/update-agent-context.sh:*)"
     ]
   }
 }
