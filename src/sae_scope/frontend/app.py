@@ -8,7 +8,11 @@ import pandas as pd
 
 from sae_scope.backend.dataset import SAELensDataset
 from sae_scope.backend.interp_dataset import InterpEmbedDataset
+from sae_scope.backend.retriever import SearchMode, WeaviateRetriever
 from sae_scope.frontend.components.tabs import create_scatterplot
+
+# Global retriever instance (initialized on first dataset load)
+_retriever: WeaviateRetriever | None = None
 
 
 def list_data_files() -> list[str]:
@@ -27,6 +31,8 @@ def list_data_files() -> list[str]:
 def search_features(
     query: str,
     dataset: SAELensDataset | None,
+    search_mode: str = "Lexical",
+    k: int = 10,
 ) -> list[list[str | int]]:
     """
     Search features and return results for dataframe display.
@@ -34,19 +40,30 @@ def search_features(
     Args:
         query: Search query string.
         dataset: Current dataset or None.
+        search_mode: Search mode ("Lexical", "Vector", or "Hybrid").
+        k: Maximum number of results to return.
 
     Returns:
-        List of [index, label] pairs for matching features, limited to 100.
+        List of [index, label] pairs for matching features.
     """
+    global _retriever
+
     if dataset is None:
         return []
 
     if not query.strip():
-        # Show first 100 features when no search query
-        results = [(i, dataset.features.labels[i]) for i in range(min(100, len(dataset.features)))]
-    else:
-        results = dataset.features.search(query)[:100]
+        # Show first k features when no search query
+        results = [(i, dataset.features.labels[i]) for i in range(min(k, len(dataset.features)))]
+        return [[idx, label] for idx, label in results]
 
+    # Use retriever if available
+    if _retriever is not None:
+        mode = SearchMode[search_mode.upper()]
+        search_results = _retriever.search(query, mode, k=k)
+        return [[r.index, r.label] for r in search_results]
+
+    # Fallback to basic search if retriever not available
+    results = dataset.features.search(query)[:k]
     return [[idx, label] for idx, label in results]
 
 
@@ -173,13 +190,28 @@ def create_app() -> gr.Blocks:
                         )
 
                     with gr.Accordion("Search Features", open=False):
+                        search_mode_dropdown = gr.Dropdown(
+                            label="Search Mode",
+                            choices=["Lexical", "Vector", "Hybrid"],
+                            value="Lexical",
+                            interactive=True,
+                        )
                         feature_search_input = gr.Textbox(
                             label="Search Features",
                             placeholder="Type to search feature labels...",
                         )
+                        search_results_limit = gr.Number(
+                            label="Max Results",
+                            value=10,
+                            minimum=1,
+                            maximum=100,
+                            step=1,
+                            interactive=True,
+                        )
+                        feature_search_button = gr.Button("Search")
                         feature_results = gr.Dataframe(
                             headers=["Index", "Label"],
-                            label="Feature Search Results (max 100)",
+                            label="Feature Search Results",
                             interactive=False,
                         )
 
@@ -229,6 +261,17 @@ def create_app() -> gr.Blocks:
                 print(f"[TIMING]   load dataset: {time.time() - t0:.3f}s")
             except Exception as e:
                 raise gr.Error(f"Failed to load dataset: {e}") from e
+
+            # Initialize retriever and index feature labels
+            global _retriever
+            try:
+                t0 = time.time()
+                if _retriever is None:
+                    _retriever = WeaviateRetriever()
+                _retriever.ensure_indexed(filename, dataset.features.labels)
+                print(f"[TIMING]   ensure_indexed: {time.time() - t0:.3f}s")
+            except ConnectionError as e:
+                raise gr.Error(str(e)) from e
 
             # Get default features (first two)
             x_idx, y_idx = dataset.get_default_feature_indices()
@@ -345,22 +388,26 @@ def create_app() -> gr.Blocks:
 
         def on_feature_search_change(
             query: str,
+            search_mode: str,
+            k: int,
             dataset: SAELensDataset | None,
         ) -> list[list[str | int]]:
             """
-            Handle feature search input changes.
+            Handle feature search button click.
 
             Args:
                 query: Search query string.
+                search_mode: Selected search mode.
+                k: Maximum number of results.
                 dataset: Current dataset or None.
 
             Returns:
                 List of [index, label] pairs for display.
             """
             start = time.time()
-            print(f"[TIMING] on_feature_search_change START query={query!r}")
+            print(f"[TIMING] on_feature_search_change START query={query!r} mode={search_mode} k={k}")
 
-            results = search_features(query, dataset)
+            results = search_features(query, dataset, search_mode, int(k))
 
             print(f"[TIMING] on_feature_search_change END: {time.time() - start:.3f}s")
             return results
@@ -434,9 +481,9 @@ def create_app() -> gr.Blocks:
         )
 
         # Wire feature search
-        feature_search_input.change(
+        feature_search_button.click(
             fn=on_feature_search_change,
-            inputs=[feature_search_input, current_dataset],
+            inputs=[feature_search_input, search_mode_dropdown, search_results_limit, current_dataset],
             outputs=[feature_results],
         )
 

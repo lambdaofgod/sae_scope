@@ -8,7 +8,9 @@
       "Bash(uv run python:*)",
       "Bash(.specify/scripts/bash/setup-plan.sh:*)",
       "WebFetch(domain:github.com)",
-      "Bash(.specify/scripts/bash/update-agent-context.sh:*)"
+      "Bash(.specify/scripts/bash/update-agent-context.sh:*)",
+      "mcp__serena__find_symbol",
+      "mcp__serena__search_for_pattern"
     ]
   }
 }

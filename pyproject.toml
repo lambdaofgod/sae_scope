@@ -9,6 +9,7 @@ dependencies = [
     "interp-embed",
     "pandas>=2.2.3",
     "plotly>=6.5.0",
+    "weaviate-client>=4.19.0",
 ]
 
 [build-system]

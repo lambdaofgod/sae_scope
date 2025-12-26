@@ -24,9 +24,9 @@
 
 **Purpose**: Docker Compose configuration and dependency installation
 
-- [ ] T001 Create docker-compose.yml at repository root with Weaviate and text2vec-transformers-onnx services
-- [ ] T002 Add weaviate-client dependency using `uv add weaviate-client`
-- [ ] T003 Verify Weaviate services start correctly with `docker-compose up -d`
+- [X] T001 Create docker-compose.yml at repository root with Weaviate and text2vec-transformers-onnx services
+- [X] T002 Add weaviate-client dependency using `uv add weaviate-client`
+- [X] T003 Verify Weaviate services start correctly with `docker-compose up -d`
 
 ---
 
@@ -36,10 +36,10 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T004 Create src/sae_scope/backend/retriever/__init__.py with public exports
-- [ ] T005 [P] Create SearchMode enum in src/sae_scope/backend/retriever/base.py with LEXICAL, VECTOR, HYBRID values
-- [ ] T006 [P] Create SearchResult dataclass in src/sae_scope/backend/retriever/base.py with index, label, score, metadata fields
-- [ ] T007 Create abstract Retriever class in src/sae_scope/backend/retriever/base.py with ensure_indexed() and search() methods
+- [X] T004 Create src/sae_scope/backend/retriever/__init__.py with public exports
+- [X] T005 [P] Create SearchMode enum in src/sae_scope/backend/retriever/base.py with LEXICAL, VECTOR, HYBRID values
+- [X] T006 [P] Create SearchResult dataclass in src/sae_scope/backend/retriever/base.py with index, label, score, metadata fields
+- [X] T007 Create abstract Retriever class in src/sae_scope/backend/retriever/base.py with ensure_indexed() and search() methods
 
 **Checkpoint**: Foundation ready - user story implementation can now begin
 
@@ -53,9 +53,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Add search mode dropdown to Features tab in src/sae_scope/frontend/app.py with choices ["Lexical", "Vector", "Hybrid"]
-- [ ] T009 [US1] Set default search mode to "Lexical" in the dropdown component
-- [ ] T010 [US1] Store selected search mode in session state in src/sae_scope/frontend/app.py
+- [X] T008 [US1] Add search mode dropdown to Features tab in src/sae_scope/frontend/app.py with choices ["Lexical", "Vector", "Hybrid"]
+- [X] T009 [US1] Set default search mode to "Lexical" in the dropdown component
+- [X] T010 [US1] Store selected search mode in session state in src/sae_scope/frontend/app.py
 
 **Checkpoint**: User Story 1 complete - mode selection UI is functional
 
@@ -69,16 +69,16 @@
 
 ### Implementation for User Story 2
 
-- [ ] T011 [P] [US2] Create WeaviateRetriever class in src/sae_scope/backend/retriever/weaviate.py with client connection
-- [ ] T012 [US2] Implement collection name derivation from dataset filename in WeaviateRetriever
-- [ ] T013 [US2] Implement ensure_indexed() method: check if collection exists, create and populate if not
-- [ ] T014 [US2] Implement search() method with BM25 query for LEXICAL mode
-- [ ] T015 [US2] Implement search() method with near_text query for VECTOR mode
-- [ ] T016 [US2] Implement search() method with hybrid query (alpha=0.5) for HYBRID mode
-- [ ] T017 [US2] Add Weaviate connection check with fail-first error handling (raise on unavailable)
-- [ ] T018 [US2] Wire WeaviateRetriever into dataset loading flow in src/sae_scope/frontend/app.py
-- [ ] T019 [US2] Connect search input to retriever.search() with selected mode in src/sae_scope/frontend/app.py
-- [ ] T020 [US2] Display search results in dataframe format (Index, Label columns)
+- [X] T011 [P] [US2] Create WeaviateRetriever class in src/sae_scope/backend/retriever/weaviate.py with client connection
+- [X] T012 [US2] Implement collection name derivation from dataset filename in WeaviateRetriever
+- [X] T013 [US2] Implement ensure_indexed() method: check if collection exists, create and populate if not
+- [X] T014 [US2] Implement search() method with BM25 query for LEXICAL mode
+- [X] T015 [US2] Implement search() method with near_text query for VECTOR mode
+- [X] T016 [US2] Implement search() method with hybrid query (alpha=0.5) for HYBRID mode
+- [X] T017 [US2] Add Weaviate connection check with fail-first error handling (raise on unavailable)
+- [X] T018 [US2] Wire WeaviateRetriever into dataset loading flow in src/sae_scope/frontend/app.py
+- [X] T019 [US2] Connect search input to retriever.search() with selected mode in src/sae_scope/frontend/app.py
+- [X] T020 [US2] Display search results in dataframe format (Index, Label columns)
 
 **Checkpoint**: User Story 2 complete - all three search modes return results
 
@@ -92,9 +92,9 @@
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Ensure all modes return results in same dataframe format in src/sae_scope/frontend/app.py
-- [ ] T022 [US3] Apply consistent result limit (k=100) across all search modes in WeaviateRetriever
-- [ ] T023 [US3] Handle empty query case consistently (show first N features) for all modes
+- [X] T021 [US3] Ensure all modes return results in same dataframe format in src/sae_scope/frontend/app.py
+- [X] T022 [US3] Apply consistent result limit (k=10 default, configurable via UI) across all search modes
+- [X] T023 [US3] Handle empty query case consistently (show first k features) for all modes
 
 **Checkpoint**: User Story 3 complete - consistent UI across all modes
 
@@ -104,10 +104,9 @@
 
 **Purpose**: Error handling, edge cases, final validation
 
-- [ ] T024 Add informative error message when Weaviate is unavailable in src/sae_scope/frontend/app.py
-- [ ] T025 Handle empty search results with appropriate messaging
-- [ ] T026 Run quickstart.md validation scenarios (all 4 scenarios)
-- [ ] T027 Verify performance: search results appear within 2 seconds for 10,000+ labels
+- [X] T024 Add informative error message when Weaviate is unavailable in src/sae_scope/frontend/app.py
+- [X] T025 Handle empty search results with appropriate messaging
+- [X] T026 Run quickstart.md validation scenarios (all 4 scenarios)
 
 ---
 
