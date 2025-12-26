@@ -17,6 +17,7 @@ class InterpEmbedDataset(SAELensDataset):
         self,
         interp_dataset: InterpDataset,
         text_field: str = "text",
+        aggregation_method: str = "max",
     ) -> None:
         """
         Initialize from an interp_embed Dataset.
@@ -24,6 +25,7 @@ class InterpEmbedDataset(SAELensDataset):
         Args:
             interp_dataset: Loaded interp_embed.Dataset instance.
             text_field: Column name in the dataset containing text content.
+            aggregation_method: Method for aggregating latents ("max", "mean", "binarize", "count").
 
         Raises:
             ValueError: If dataset has fewer than 2 features or no documents.
@@ -32,7 +34,7 @@ class InterpEmbedDataset(SAELensDataset):
         self._text_field = text_field
 
         # Cache latents matrix (N documents x F features)
-        self._latents = interp_dataset.latents(aggregation_method="max")
+        self._latents = interp_dataset.latents(aggregation_method=aggregation_method)
         if self._latents is None or len(self._latents) == 0:
             raise ValueError("Dataset has no documents")
 
@@ -53,14 +55,23 @@ class InterpEmbedDataset(SAELensDataset):
 
         self._features = SAEFeatures(labels=labels)
 
+        # Compute and cache feature statistics
+        self._feature_stats = self.compute_feature_statistics()
+
     @classmethod
-    def load(cls, file_path: str, text_field: str = "text") -> "InterpEmbedDataset":
+    def load(
+        cls,
+        file_path: str,
+        text_field: str = "text",
+        aggregation_method: str = "max",
+    ) -> "InterpEmbedDataset":
         """
         Load dataset from a .pkl file.
 
         Args:
             file_path: Path to .pkl file saved by interp_embed.
             text_field: Column name containing text.
+            aggregation_method: Method for aggregating latents ("max", "mean", "binarize", "count").
 
         Returns:
             InterpEmbedDataset instance.
@@ -74,7 +85,7 @@ class InterpEmbedDataset(SAELensDataset):
             raise FileNotFoundError(f"Dataset file not found: {file_path}")
 
         interp_ds = InterpDataset.load_from_file(str(path))
-        return cls(interp_ds, text_field=text_field)
+        return cls(interp_ds, text_field=text_field, aggregation_method=aggregation_method)
 
     @property
     def features(self) -> SAEFeatures:
@@ -137,4 +148,28 @@ class InterpEmbedDataset(SAELensDataset):
         return pd.DataFrame({
             "index": range(len(texts)),
             "text": texts,
+        })
+
+    def compute_feature_statistics(self) -> pd.DataFrame:
+        """
+        Compute statistics for all features.
+
+        Returns:
+            DataFrame with columns: index, label, frequency, std, max.
+            Frequency is normalized (0-1) as count_nonzero / num_documents.
+        """
+        num_documents = self._latents.shape[0]
+        num_features = self._latents.shape[1]
+
+        # Compute statistics per feature (column)
+        frequency = np.count_nonzero(self._latents, axis=0) / num_documents
+        std = np.std(self._latents, axis=0)
+        max_val = np.max(self._latents, axis=0)
+
+        return pd.DataFrame({
+            "index": range(num_features),
+            "label": self._features.labels,
+            "frequency": frequency,
+            "std": std,
+            "max": max_val,
         })

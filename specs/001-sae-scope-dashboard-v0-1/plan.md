@@ -1,137 +1,137 @@
-# Implementation Plan: SAE Scope Dashboard v0.1 - Performance UI Refactor
+# Implementation Plan: Feature Statistics in Features Tab
 
 **Branch**: `001-sae-scope-dashboard-v0-1` | **Date**: 2025-12-18 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/001-sae-scope-dashboard-v0-1/spec.md`
+**Input**: User request to add feature statistics visualization to Features tab
 
 ## Summary
 
-Refactor the Gradio dashboard UI to address performance issues caused by rendering thousands of features in a multiselect checkbox group. Replace the sidebar-based feature selection with:
-1. Two integer input fields for direct feature index entry in the Scatterplot tab
-2. A separate Features tab with searchable feature list for discovery
+Add dataset feature statistics to the Features tab:
+1. Summary statistics via pandas `describe()` for frequency (normalized 0-1), std, and max columns
+2. Top N features (user-configurable, default 10) ranked by each metric
+
+Statistics are computed once on dataset load and cached. User can adjust how many top features to display via a number input.
+
+Both the statistics and the existing search functionality will be wrapped in Gradio Accordions.
 
 ## Technical Context
 
 **Language/Version**: Python 3.10
-**Primary Dependencies**: Gradio 5.x, Plotly Express, Pandas, interp-embed
-**Storage**: Local .pkl files in /data directory
-**Testing**: pytest
-**Target Platform**: Local desktop (browser-based Gradio app)
-**Project Type**: Single Python package
-**Performance Goals**: Instant UI response (no lag from feature list rendering)
-**Constraints**: Must handle datasets with several thousand features without UI slowdown
-**Scale/Scope**: Single-user local dashboard, datasets with thousands of SAE features
+**Primary Dependencies**: Gradio 5.x, NumPy, Pandas
+**Data Source**: `InterpEmbedDataset._latents` matrix (N documents x F features)
+**Existing Code**: Features tab in `app.py` with search functionality
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
-
 | Principle | Status | Notes |
 |-----------|--------|-------|
-| SOLID - Single Responsibility | PASS | Each component handles one concern (tabs.py for tabs, feature input for selection) |
-| SOLID - Open/Closed | PASS | Extending with new tab, not modifying existing tab logic |
-| SOLID - Liskov Substitution | N/A | No inheritance involved |
-| SOLID - Interface Segregation | PASS | Simple component interfaces |
-| SOLID - Dependency Inversion | PASS | Components depend on dataset abstraction |
-| DRY | PASS | Shared scatterplot creation logic remains centralized |
-| Fail-First | PASS | Invalid feature indices will raise errors immediately |
+| SOLID - Single Responsibility | PASS | Statistics computation in backend, UI in frontend |
+| SOLID - Open/Closed | PASS | Extending Features tab, not modifying core functionality |
+| DRY | PASS | Single compute method, statistics cached in dataset |
+| Fail-First | PASS | Validate dataset exists before computing stats |
 | Type Safety | PASS | Type hints throughout |
-| Small Focused Commits | PASS | Will split into: remove sidebar, add feature inputs, add features tab |
 
-## Project Structure
+## UI Layout (ASCII Diagram)
 
-### Documentation (this feature)
-
-```text
-specs/001-sae-scope-dashboard-v0-1/
-  plan.md              # This file
-  research.md          # Phase 0 output
-  data-model.md        # Phase 1 output
-  quickstart.md        # Phase 1 output
-  contracts/           # Phase 1 output
-  tasks.md             # Phase 2 output
 ```
-
-### Source Code (repository root)
-
-```text
-src/
-  sae_scope/
-    __init__.py
-    backend/
-      __init__.py
-      dataset.py
-      features.py
-      interp_dataset.py
-    frontend/
-      __init__.py
-      __main__.py
-      app.py                    # Main app orchestration (MODIFY)
-      components/
-        __init__.py
-        sidebar.py              # DELETE - no longer needed
-        tabs.py                 # MODIFY - add feature inputs to scatterplot tab
-        features_tab.py         # NEW - searchable feature list tab
-
-tests/
-  contract/
-  integration/
-  unit/
++==============================================================================+
+|                              Features Tab                                     |
++==============================================================================+
+|                                                                              |
+| [v] Feature Statistics  (Accordion - open by default)                        |
+| +--------------------------------------------------------------------------+ |
+| |                                                                          | |
+| |  Summary Statistics (describe() output)                                  | |
+| |  +--------------------------------------------------------------------+  | |
+| |  |          | Frequency | Std Dev  | Max Value |                      |  | |
+| |  |----------|-----------|----------|-----------|                      |  | |
+| |  | count    | 16384     | 16384    | 16384     |                      |  | |
+| |  | mean     | 0.042     | 0.15     | 2.31      |                      |  | |
+| |  | std      | 0.128     | 0.23     | 1.87      |                      |  | |
+| |  | min      | 0.000     | 0.00     | 0.00      |                      |  | |
+| |  | 25%      | 0.002     | 0.02     | 0.41      |                      |  | |
+| |  | 50%      | 0.008     | 0.08     | 1.22      |                      |  | |
+| |  | 75%      | 0.031     | 0.19     | 3.05      |                      |  | |
+| |  | max      | 0.452     | 2.41     | 18.7      |                      |  | |
+| |  +--------------------------------------------------------------------+  | |
+| |                                                                          | |
+| |  Top N Features: [  10  ]                                                | |
+| |                                                                          | |
+| |  Top N by Frequency (normalized 0-1)                                     | |
+| |  +--------------------------------------------------------------------+  | |
+| |  | Index | Label                                          | Frequency |  | |
+| |  |-------|------------------------------------------------|-----------|  | |
+| |  | 42    | love                                           | 0.452     |  | |
+| |  | 77    | joy                                            | 0.389     |  | |
+| |  | 99    | anger                                          | 0.320     |  | |
+| |  | ...   | ...                                            | ...       |  | |
+| |  +--------------------------------------------------------------------+  | |
+| |                                                                          | |
+| |  Top N by Std Dev                                                        | |
+| |  +--------------------------------------------------------------------+  | |
+| |  | Index | Label                                          | Std Dev   |  | |
+| |  |-------|------------------------------------------------|-----------|  | |
+| |  | 99    | anger                                          | 2.41      |  | |
+| |  | 42    | love                                           | 1.89      |  | |
+| |  | 77    | joy                                            | 1.52      |  | |
+| |  | ...   | ...                                            | ...       |  | |
+| |  +--------------------------------------------------------------------+  | |
+| |                                                                          | |
+| |  Top N by Max Value                                                      | |
+| |  +--------------------------------------------------------------------+  | |
+| |  | Index | Label                                          | Max Value |  | |
+| |  |-------|------------------------------------------------|-----------|  | |
+| |  | 77    | joy                                            | 18.7      |  | |
+| |  | 42    | love                                           | 15.2      |  | |
+| |  | 99    | anger                                          | 12.8      |  | |
+| |  | ...   | ...                                            | ...       |  | |
+| |  +--------------------------------------------------------------------+  | |
+| |                                                                          | |
+| +--------------------------------------------------------------------------+ |
+|                                                                              |
+| [>] Search Features  (Accordion - closed by default)                         |
+| +--------------------------------------------------------------------------+ |
+| |  Search: [________________________]                                      | |
+| |                                                                          | |
+| |  +--------------------------------------------------------------------+  | |
+| |  | Index | Label                                                      |  | |
+| |  |-------|-----------------------------------------------------------|  | |
+| |  | 42    | love                                                       |  | |
+| |  | 77    | joy                                                        |  | |
+| |  | ...   | ...                                                        |  | |
+| |  +--------------------------------------------------------------------+  | |
+| +--------------------------------------------------------------------------+ |
+|                                                                              |
++==============================================================================+
 ```
-
-**Structure Decision**: Single project structure. Frontend components split by concern. Sidebar component will be deleted as it's no longer needed.
 
 ## Design Overview
 
-### Current Architecture (Problem)
+### Backend Changes
 
-```
-app.py
-  Sidebar (checkbox multiselect with ALL features)  <-- SLOW: renders thousands of checkboxes
-    search_input
-    checkbox_group
-  Main Column
-    Tabs
-      Scatterplot tab
-      Data tab
-```
+Add to `InterpEmbedDataset`:
+- `compute_feature_statistics()` - computes and caches DataFrame with index, label, frequency (normalized), std, max for ALL features
+- Frequency = count_nonzero / num_documents (normalized 0-1)
+- Cache the full statistics DataFrame on dataset load
+- Frontend slices top N as needed and calls describe() on columns
 
-### New Architecture (Solution)
+### Frontend Changes
 
-```
-app.py
-  Main Column
-    Tabs
-      Scatterplot tab
-        Feature Indices (textbox: "0, 1")  <-- FAST: single text input
-        Plot
-      Features tab                         <-- LAZY: only renders search results
-        Search input
-        Results list (limited display)
-      Data tab
-```
+Restructure Features tab with two accordions as shown in diagram above.
 
-### Key Changes
+### Data Flow
 
-1. **Delete sidebar.py**: Remove the sidebar component entirely
-2. **Modify tabs.py**: Add single `gr.Textbox` for comma-separated feature indices in the Scatterplot tab
-3. **New features_tab.py**: Create a Features tab with search functionality that only displays matching results (lazy rendering)
-4. **Modify app.py**: Wire up new components, remove sidebar dependencies
+1. On dataset load: compute all feature statistics once, cache in dataset
+2. Display summary stats (describe() on frequency/std/max columns)
+3. Display top N (default 10) for each metric in vertical layout
+4. When user changes N: re-slice cached stats, update top N dataframes
+5. Existing search remains unchanged in Search accordion
 
-### Component Behavior
+## Files to Modify
 
-**Scatterplot Tab - Feature Indices Input**:
-- Single `gr.Textbox` for comma-separated feature indices (e.g., "0, 1")
-- Default to "0, 1" when dataset loads
-- Parse input to extract two integer indices
-- Validate indices are within range (0 to num_features-1)
-- Update scatterplot on change
-
-**Features Tab - Searchable List**:
-- Text input for search query
-- Results displayed as a list/dataframe showing: index, label
-- Limited to top N matches (e.g., 50) to avoid rendering issues
-- Click on result could copy index to clipboard or show details
+1. `src/sae_scope/backend/dataset.py` - Add abstract method signature
+2. `src/sae_scope/backend/interp_dataset.py` - Implement statistics computation with caching
+3. `src/sae_scope/frontend/app.py` - Add accordion UI, summary stats, number input, and wire everything
 
 ## Complexity Tracking
 
-No constitution violations - this is a simplification, not an addition of complexity.
+No constitution violations. This extends existing functionality without adding unnecessary complexity.

@@ -71,3 +71,18 @@ class SAELensDataset(ABC):
                 - "text": Full text content
         """
         ...
+
+    @abstractmethod
+    def compute_feature_statistics(self) -> pd.DataFrame:
+        """
+        Compute statistics for all features.
+
+        Returns:
+            DataFrame with columns:
+                - "index": Feature index
+                - "label": Feature label
+                - "frequency": Normalized frequency (0-1) of nonzero activations
+                - "std": Standard deviation of activation values
+                - "max": Maximum activation value
+        """
+        ...

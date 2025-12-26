@@ -140,6 +140,38 @@ No new dependencies required. Using existing:
 - pandas (>=2.0.0)
 - interp_embed (existing)
 
+### 9. Feature Statistics Display (NEW)
+
+**Decision**: Add feature statistics to Features tab using Gradio Accordions with user-configurable top N.
+
+**Rationale**:
+- Accordions allow collapsible sections to organize content
+- Statistics accordion open by default (primary discovery tool)
+- Search accordion closed by default (secondary tool)
+- User-configurable N (default 10) gives flexibility without overwhelming
+- Statistics computed once and cached; slicing is cheap
+
+**Statistics to compute**:
+- Frequency: Normalized (0-1) count of nonzero activations per feature (count_nonzero / num_documents)
+- Standard deviation: Spread of activation values
+- Maximum value: Peak activation value
+
+**UI Structure**:
+- Number input for "Top N Features" (default: 10, min: 1, max: 100)
+- Three dataframes showing top N by each metric
+- Search functionality in separate accordion
+
+### 10. Feature Index Inputs (UPDATED - Phase 12)
+
+**Decision**: Use two `gr.Number` inputs with "Update Plot" button.
+
+**Rationale**:
+- Explicit number fields clearer than comma-separated text
+- Button gives user control over when to update (no accidental updates while typing)
+- Simpler validation (gr.Number enforces numeric input)
+
+**Supersedes**: Previous decision to use single textbox with comma-separated values.
+
 ## Open Questions (None)
 
 All technical questions resolved. Ready to proceed with implementation.

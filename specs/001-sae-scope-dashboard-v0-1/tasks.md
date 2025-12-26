@@ -378,6 +378,98 @@ Task: "T072-T075 - Create features_tab.py component"
 
 ---
 
+## Phase 13: Feature Statistics in Features Tab
+
+**Purpose**: Add dataset feature statistics visualization to Features tab
+
+**Features**:
+1. Summary statistics via pandas describe() for frequency, std, max columns
+2. Top N features (user-configurable, default 10) ranked by each metric
+3. Accordion layout separating statistics from search
+
+### Step 1: Backend - Add Statistics Computation
+
+- [X] T091 Add abstract method compute_feature_statistics() to SAELensDataset in src/sae_scope/backend/dataset.py
+- [X] T092 Implement compute_feature_statistics() in InterpEmbedDataset in src/sae_scope/backend/interp_dataset.py
+- [X] T093 Add _feature_stats cache attribute to InterpEmbedDataset.__init__() in src/sae_scope/backend/interp_dataset.py
+- [X] T094 Call compute_feature_statistics() during dataset initialization to populate cache in src/sae_scope/backend/interp_dataset.py
+
+### Step 2: Frontend - Add Statistics UI Components
+
+- [X] T095 Add gr.Accordion for "Feature Statistics" (open=True) wrapping statistics content in Features tab in src/sae_scope/frontend/app.py
+- [X] T096 Add gr.Dataframe for summary_stats_df showing describe() output in src/sae_scope/frontend/app.py
+- [X] T097 Add gr.Number for top_n_input (default=10, min=1, max=100) in src/sae_scope/frontend/app.py
+- [X] T098 Add gr.Dataframe for top_by_frequency showing top N features by frequency in src/sae_scope/frontend/app.py
+- [X] T099 Add gr.Dataframe for top_by_std showing top N features by std dev in src/sae_scope/frontend/app.py
+- [X] T100 Add gr.Dataframe for top_by_max showing top N features by max value in src/sae_scope/frontend/app.py
+- [X] T101 Add gr.Accordion for "Search Features" (open=False) wrapping existing search content in src/sae_scope/frontend/app.py
+
+### Step 3: Frontend - Wire Statistics Handlers
+
+- [X] T102 Add get_top_n_features() helper function to slice cached stats by metric in src/sae_scope/frontend/app.py
+- [X] T103 Add get_summary_stats() helper function to call describe() on stats columns in src/sae_scope/frontend/app.py
+- [X] T104 Update on_dataset_select() to return statistics dataframes in src/sae_scope/frontend/app.py
+- [X] T105 Add on_top_n_change() handler to update top N dataframes when input changes in src/sae_scope/frontend/app.py
+- [X] T106 Wire top_n_input.change to on_top_n_change() in src/sae_scope/frontend/app.py
+- [X] T107 Update dataset_dropdown.change outputs to include all statistics dataframes in src/sae_scope/frontend/app.py
+
+### Step 4: Validation
+
+- [X] T108 Verify app imports without errors by running python -c "from sae_scope.frontend.app import create_app"
+- [X] T109 Verify statistics display correctly when loading a dataset
+
+**Checkpoint**: Features tab shows summary statistics and top N features by frequency/std/max with configurable N
+
+---
+
+## Dependencies for Phase 13
+
+- **Step 1** (T091-T094): Backend changes - can run in parallel with nothing, no dependencies
+- **Step 2** (T095-T101): UI components - depends on Step 1 completion
+- **Step 3** (T102-T107): Wiring - depends on Step 2 completion
+- **Step 4** (T108-T109): Validation - depends on all previous steps
+
+---
+
+## Phase 14: Latent Aggregation Method Dropdown
+
+**Purpose**: Add dropdown to select latent aggregation method for dataset processing
+
+**Problem**: Currently, the dataset uses hardcoded "max" aggregation when calling `interp_embed.Dataset.latents()`. Users need flexibility to switch between different aggregation methods.
+
+**Solution**:
+1. Add `aggregation_method` parameter to `InterpEmbedDataset.load()`
+2. Add `gr.Dropdown` below dataset selection with options: "max" (default), "mean", "binarize", "count"
+3. When aggregation changes, reload the dataset with new method (reuses existing on_dataset_select flow)
+
+### Step 1: Backend - Add Aggregation Method Parameter
+
+- [X] T110 Add `aggregation_method` parameter to InterpEmbedDataset.__init__() (default "max") and use it when calling latents() in src/sae_scope/backend/interp_dataset.py
+- [X] T111 Add `aggregation_method` parameter to InterpEmbedDataset.load() classmethod and pass to __init__() in src/sae_scope/backend/interp_dataset.py
+
+### Step 2: Frontend - Add Aggregation Dropdown UI
+
+- [X] T112 Add gr.Dropdown for aggregation_method below dataset_dropdown with choices ["max", "mean", "binarize", "count"] and default "max" in src/sae_scope/frontend/app.py
+- [X] T113 Update on_dataset_select() to accept aggregation_method parameter and pass to InterpEmbedDataset.load() in src/sae_scope/frontend/app.py
+- [X] T114 Wire aggregation_dropdown.change to trigger on_dataset_select() with current dataset and new aggregation method in src/sae_scope/frontend/app.py
+
+### Step 3: Validation
+
+- [X] T115 Verify app imports without errors by running python -c "from sae_scope.frontend.app import create_app"
+- [X] T116 Verify aggregation dropdown reloads dataset and updates all visualizations
+
+**Checkpoint**: Dashboard has aggregation method dropdown that reloads dataset with new aggregation method
+
+---
+
+## Dependencies for Phase 14
+
+- **Step 1** (T110-T111): Backend changes - no dependencies
+- **Step 2** (T112-T114): Frontend UI and wiring - depends on Step 1 completion
+- **Step 3** (T115-T116): Validation - depends on all previous steps
+
+---
+
 ## Notes
 
 - [P] tasks = different files, no dependencies
@@ -387,4 +479,6 @@ Task: "T072-T075 - Create features_tab.py component"
 - Phase 11 removes sidebar toggle (US4) - no longer applicable after refactor
 - Feature search (US5) moves to Features tab with gr.Dataframe display
 - Phase 12 replaces comma-separated textbox with explicit number inputs and button
+- Phase 13 adds feature statistics with describe() summary and top N tables
+- Phase 14 adds latent aggregation method dropdown - reloads dataset on change (simple approach)
 - Commit after each phase or logical task group
