@@ -55,6 +55,23 @@ A researcher wants the search experience to feel consistent regardless of which 
 
 ---
 
+### User Story 4 - SAE Retrieval Tab (Priority: P4)
+
+A researcher wants a dedicated "SAE Retrieval" tab that provides unified search across both feature labels and dataset texts, displaying results from both sources in a single interface.
+
+**Why this priority**: This extends the search capability beyond feature labels to include text-based retrieval using InterpEmbedRetriever, enabling more comprehensive exploration of the dataset.
+
+**Independent Test**: Can be tested by opening the SAE Retrieval tab, entering a query, and verifying results appear in two sections: one for matching feature labels and one for matching texts from the dataset.
+
+**Acceptance Scenarios**:
+
+1. **Given** a dataset is loaded, **When** the user opens the SAE Retrieval tab, **Then** they see a search input field.
+2. **Given** the SAE Retrieval tab is open, **When** the user enters a search query, **Then** the system displays two result sections: "Features" (from label search) and "Texts" (from InterpEmbedRetriever).
+3. **Given** a search query is entered, **When** results are returned, **Then** both feature labels and matching texts are displayed with their relevance scores.
+4. **Given** a search returns no matches in one category, **When** results are displayed, **Then** the empty category shows an appropriate message while the other category shows its results.
+
+---
+
 ### Edge Cases
 
 - What happens when vector search is selected but no embedding model is available? System displays an informative error message and falls back to lexical search.
@@ -71,13 +88,18 @@ A researcher wants the search experience to feel consistent regardless of which 
 - **FR-004**: System MUST route search queries through an abstract search component based on the selected mode.
 - **FR-005**: System MUST return search results in a consistent format regardless of search mode (Index and Label columns).
 - **FR-006**: System MUST display appropriate error messages when a search mode is unavailable (e.g., missing embedding model for vector search).
-- **FR-007**: System MUST limit search results to a maximum count (consistent with current 100 result limit).
+- **FR-007**: System MUST limit search results to a maximum count (configurable via UI).
+- **FR-008**: System MUST provide a dedicated "SAE Retrieval" tab for unified search.
+- **FR-009**: System MUST display feature label search results in the SAE Retrieval tab.
+- **FR-010**: System MUST display text search results from InterpEmbedRetriever in the SAE Retrieval tab.
+- **FR-011**: System MUST show both result types (features and texts) simultaneously for a single query.
 
 ### Key Entities
 
 - **SearchMode**: An enumeration of available search types (Lexical, Vector, Hybrid). Determines which search algorithm processes queries.
-- **Retriever**: An abstract component responsible for executing searches. Different implementations handle different search modes.
+- **Retriever**: An abstract component responsible for executing feature label searches. Supports multiple search modes (Lexical, Vector, Hybrid) via its search method.
 - **SearchResult**: A ranked list of feature matches containing feature index and label, ordered by relevance score.
+- **InterpEmbedRetriever**: A component (to be implemented) that provides unified search. Contains a Retriever for feature label search and its own implementation for dataset text search.
 
 ## Success Criteria *(mandatory)*
 
@@ -87,6 +109,7 @@ A researcher wants the search experience to feel consistent regardless of which 
 - **SC-002**: Search results appear within 2 seconds for all modes when searching across 10,000+ feature labels.
 - **SC-003**: Users can find semantically related features using vector search that would not appear in lexical search results.
 - **SC-004**: The search interface remains consistent across all modes (same input, same result format).
+- **SC-005**: Users can search for both feature labels and dataset texts from a single query in the SAE Retrieval tab.
 
 ## Assumptions
 
@@ -95,3 +118,5 @@ A researcher wants the search experience to feel consistent regardless of which 
 - Vector search requires an embedding model; if unavailable, the system gracefully degrades.
 - Hybrid search combines scores from lexical and vector approaches (exact weighting to be determined during implementation).
 - The abstract Retriever component will be designed for future extensibility (new search modes can be added).
+- InterpEmbedRetriever will compose Retriever for feature label search and have its own text search implementation.
+- The text search implementation details for InterpEmbedRetriever will be clarified during planning.
