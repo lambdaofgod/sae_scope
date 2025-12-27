@@ -55,20 +55,23 @@ A researcher wants the search experience to feel consistent regardless of which 
 
 ---
 
-### User Story 4 - SAE Retrieval Tab (Priority: P4)
+### User Story 4 - SAE Retrieval Tab: Two-Phase Text Search (Priority: P4)
 
-A researcher wants a dedicated "SAE Retrieval" tab that provides unified search across both feature labels and dataset texts, displaying results from both sources in a single interface.
+A researcher wants a dedicated "SAE Retrieval" tab that provides text search through a two-phase workflow: first finding relevant latents/features, then using selected latents to find matching texts in the dataset.
 
-**Why this priority**: This extends the search capability beyond feature labels to include text-based retrieval using InterpEmbedRetriever, enabling more comprehensive exploration of the dataset.
+**Why this priority**: This extends the search capability beyond feature labels to include text-based retrieval. The two-phase approach gives researchers control over which latents influence text matching, enabling more precise exploration.
 
-**Independent Test**: Can be tested by opening the SAE Retrieval tab, entering a query, and verifying results appear in two sections: one for matching feature labels and one for matching texts from the dataset.
+**Independent Test**: Can be tested by opening the SAE Retrieval tab, entering a query to find latents, selecting specific latents, then clicking to retrieve matching texts.
 
 **Acceptance Scenarios**:
 
-1. **Given** a dataset is loaded, **When** the user opens the SAE Retrieval tab, **Then** they see a search input field.
-2. **Given** the SAE Retrieval tab is open, **When** the user enters a search query, **Then** the system displays two result sections: "Features" (from label search) and "Texts" (from InterpEmbedRetriever).
-3. **Given** a search query is entered, **When** results are returned, **Then** both feature labels and matching texts are displayed with their relevance scores.
-4. **Given** a search returns no matches in one category, **When** results are displayed, **Then** the empty category shows an appropriate message while the other category shows its results.
+1. **Given** a dataset is loaded, **When** the user opens the SAE Retrieval tab, **Then** they see a search input field for finding latents.
+2. **Given** the SAE Retrieval tab is open, **When** the user enters a search query and clicks "Find Latents", **Then** the system displays matching feature labels with checkboxes for selection.
+3. **Given** latent search results are displayed, **When** the user views the results, **Then** all retrieved latents are selected by default.
+4. **Given** latent search results are displayed, **When** the user clicks individual checkboxes, **Then** they can select/deselect specific latents to include in text matching.
+5. **Given** one or more latents are selected, **When** the user clicks "Find Texts", **Then** the system scores and displays matching texts based only on the selected latents.
+6. **Given** text results are displayed, **When** the user modifies latent selection and clicks "Find Texts" again, **Then** the text results update based on the new selection.
+7. **Given** no latents are selected, **When** the user attempts to find texts, **Then** the system displays an appropriate message requiring at least one latent selection.
 
 ---
 
@@ -89,10 +92,13 @@ A researcher wants a dedicated "SAE Retrieval" tab that provides unified search 
 - **FR-005**: System MUST return search results in a consistent format regardless of search mode (Index and Label columns).
 - **FR-006**: System MUST display appropriate error messages when a search mode is unavailable (e.g., missing embedding model for vector search).
 - **FR-007**: System MUST limit search results to a maximum count (configurable via UI).
-- **FR-008**: System MUST provide a dedicated "SAE Retrieval" tab for unified search.
-- **FR-009**: System MUST display feature label search results in the SAE Retrieval tab.
-- **FR-010**: System MUST display text search results from InterpEmbedRetriever in the SAE Retrieval tab.
-- **FR-011**: System MUST show both result types (features and texts) simultaneously for a single query.
+- **FR-008**: System MUST provide a dedicated "SAE Retrieval" tab for two-phase text search.
+- **FR-009**: System MUST display latent/feature search results with selectable checkboxes in phase 1.
+- **FR-010**: System MUST select all retrieved latents by default after phase 1 search.
+- **FR-011**: System MUST allow users to select/deselect individual latents before phase 2.
+- **FR-012**: System MUST score and display texts based only on user-selected latents in phase 2.
+- **FR-013**: System MUST require at least one latent to be selected before allowing text search.
+- **FR-014**: System MUST allow re-running text search with modified latent selections without re-running latent search.
 
 ### Key Entities
 
@@ -109,7 +115,8 @@ A researcher wants a dedicated "SAE Retrieval" tab that provides unified search 
 - **SC-002**: Search results appear within 2 seconds for all modes when searching across 10,000+ feature labels.
 - **SC-003**: Users can find semantically related features using vector search that would not appear in lexical search results.
 - **SC-004**: The search interface remains consistent across all modes (same input, same result format).
-- **SC-005**: Users can search for both feature labels and dataset texts from a single query in the SAE Retrieval tab.
+- **SC-005**: Users can select which latents influence text matching before running text search.
+- **SC-006**: Users can refine text results by modifying latent selection without re-entering the search query.
 
 ## Assumptions
 
@@ -119,4 +126,6 @@ A researcher wants a dedicated "SAE Retrieval" tab that provides unified search 
 - Hybrid search combines scores from lexical and vector approaches (exact weighting to be determined during implementation).
 - The abstract Retriever component will be designed for future extensibility (new search modes can be added).
 - InterpEmbedRetriever will compose Retriever for feature label search and have its own text search implementation.
-- The text search implementation details for InterpEmbedRetriever will be clarified during planning.
+- Text search uses a two-phase workflow: (1) find latents by query, (2) find texts using selected latents.
+- Latent selection state persists until a new latent search is performed.
+- Text scoring uses weighted sum of selected latent activations with configurable temperature.

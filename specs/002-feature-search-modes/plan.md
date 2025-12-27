@@ -7,10 +7,13 @@
 
 ## Summary
 
-Add an "SAE Retrieval" tab that provides unified search UI. InterpEmbedRetriever implements text retrieval using latent-based document scoring:
-1. Retrieve candidate latents by dense embedding similarity (labels vs query)
-2. (Optional) Rerank relevant latents with LLM (stub only, not implemented)
-3. Score documents by weighted sum of latent activations (with tunable temperature)
+Add an "SAE Retrieval" tab with a two-phase text search workflow:
+
+**Phase 1 - Find Latents**: User enters query, retrieves candidate latents by label similarity. Results displayed with checkboxes (all selected by default).
+
+**Phase 2 - Find Texts**: User selects which latents to use, then scores documents by weighted sum of selected latent activations (with tunable temperature).
+
+This gives researchers control over which latents influence text matching.
 
 ## Technical Context
 
@@ -76,35 +79,41 @@ No constitution violations requiring justification.
 
 ## Phase 0: Research (US4 - Text Retrieval Algorithm)
 
-### 1. Text Retrieval Algorithm
+### 1. Two-Phase Text Retrieval Workflow
 
-**Decision**: Latent-based document scoring with temperature-controlled softmax weighting.
+**Decision**: Split retrieval into two user-controlled phases.
 
-**Algorithm**:
+**Phase 1 - Find Latents**:
 ```
-Input: query (string), latents (N docs x F features), temperature (float)
+Input: query (string), mode (SearchMode), candidate_k (int)
+Output: list[SearchResult] with checkboxes for selection
+
+1. Use Retriever to get top-k features by label similarity
+   - results = retriever.search(query, mode, k=candidate_k)
+2. Display results with checkboxes (all selected by default)
+3. User can select/deselect individual latents
+```
+
+**Phase 2 - Find Texts**:
+```
+Input: selected_features (list of (index, score)), temperature (float), k (int)
 Output: list[TextSearchResult] sorted by score
 
-1. RETRIEVE: Use Retriever to get top-k features by label similarity to query
-   - result = retriever.search(query, mode=VECTOR, k=candidate_k)
-   - candidate_features = [(r.index, r.score) for r in result]
+1. RERANK (stub): Optional LLM reranking
+   - reranked = rerank(selected_features, query)  # Returns same list
 
-2. RERANK (stub): Optional LLM reranking of candidate features
-   - reranked_features = rerank(candidate_features, query)  # Returns same list (stub)
+2. SCORE: Compute weighted sum of latent activations
+   - weights = softmax([score / temperature for (idx, score) in reranked])
+   - doc_scores = latents[:, feature_indices] @ weights
 
-3. SCORE: For each document, compute weighted sum of latent activations
-   - weights = softmax([score / temperature for (idx, score) in reranked_features])
-   - For each doc_i in range(N):
-       doc_score = sum(weights[j] * latents[doc_i, idx_j] for j, (idx_j, _) in enumerate(reranked_features))
-
-4. RANK: Sort documents by score, return top-k
+3. RANK: Sort documents by score, return top-k
 ```
 
 **Rationale**:
-- Uses existing Retriever for feature selection (DRY)
-- Temperature controls score distribution sharpness (lower = more peaked)
+- Two phases give user control over which latents influence text matching
+- Can refine text results by changing selection without re-searching
+- Temperature controls score distribution sharpness
 - Softmax ensures weights sum to 1
-- Pure numpy implementation for efficiency
 
 ### 2. Temperature Parameter
 
@@ -150,26 +159,76 @@ def _rerank_features(
 - No actual LLM calls (per user request)
 - Easy to extend later
 
-### 5. UI Layout for SAE Retrieval Tab
+### 5. UI Layout for SAE Retrieval Tab (Two-Phase)
 
-**Decision**: Single search input, parameter controls, two result sections.
+**Decision**: Two-phase workflow with latent selection between phases.
 
-**Layout**:
+**ASCII Wireframe**:
 ```
-SAE Retrieval Tab
-├── Search Mode Dropdown (Lexical/Vector/Hybrid)
-├── Search Query Input
-├── Row:
-│   ├── Max Results (Number, default 10)
-│   ├── Candidate Features (Number, default 10)
-│   └── Temperature (Number, default 1.0)
-├── Search Button
-├── Results:
-│   ├── Accordion: "Feature Labels" (k results)
-│   │   └── Dataframe: [Index, Label, Score]
-│   └── Accordion: "Dataset Texts" (k results)
-│       └── Dataframe: [Index, Text (truncated), Score]
++------------------------------------------------------------------+
+|  SAE Retrieval                                                   |
++------------------------------------------------------------------+
+|                                                                  |
+|  === PHASE 1: Find Latents ===                                   |
+|                                                                  |
+|  Search Mode: [Hybrid v]    Candidate Count: [10]                |
+|                                                                  |
+|  Query: [                                                    ]   |
+|                                                                  |
+|  [ Find Latents ]                                                |
+|                                                                  |
+|  +--------------------------------------------------------------+|
+|  | v Retrieved Latents (select for text search)                 ||
+|  +--------------------------------------------------------------+|
+|  | [x] | Index | Label                          | Score          ||
+|  |-----|-------|--------------------------------|----------------|  |
+|  | [x] | 42    | emotional_response             | 0.89           ||
+|  | [x] | 17    | sentiment_positive             | 0.76           ||
+|  | [ ] | 103   | feeling_expression             | 0.71           ||
+|  | [x] | 88    | mood_indicator                 | 0.68           ||
+|  +--------------------------------------------------------------+|
+|                                                                  |
+|  === PHASE 2: Find Texts ===                                     |
+|                                                                  |
+|  +----------------------+  +----------------------+              |
+|  | Temperature          |  | Max Results          |              |
+|  | [1.0            ]    |  | [10             ]    |              |
+|  +----------------------+  +----------------------+              |
+|                                                                  |
+|  [ Find Texts ]                                                  |
+|                                                                  |
+|  +--------------------------------------------------------------+|
+|  | v Matching Texts                                             ||
+|  +--------------------------------------------------------------+|
+|  | Index | Text                               | Score            ||
+|  |-------|-----------------------------------|------------------|  |
+|  | 2847  | I felt so happy when I saw...     | 0.0234           ||
+|  | 1523  | The joy was overwhelming and...   | 0.0189           ||
+|  | 892   | Excitement filled the room as...  | 0.0156           ||
+|  +--------------------------------------------------------------+|
+|                                                                  |
++------------------------------------------------------------------+
 ```
+
+**Component Details**:
+
+Phase 1 - Find Latents:
+- Search Mode: gr.Dropdown, choices=["Lexical", "Vector", "Hybrid"], default="Hybrid"
+- Candidate Count: gr.Number, default=10, min=1, max=100
+- Query: gr.Textbox, placeholder="Enter search query..."
+- Find Latents: gr.Button
+- Retrieved Latents: gr.Dataframe with checkbox column (Select, Index, Label, Score)
+
+Phase 2 - Find Texts:
+- Temperature: gr.Number, default=1.0, min=0.1, max=10.0, step=0.1
+- Max Results: gr.Number, default=10, min=1, max=100
+- Find Texts: gr.Button (disabled until latents retrieved, requires at least 1 selected)
+- Matching Texts: gr.Dataframe (headers: Index, Text, Score)
+
+**State Management**:
+- Selected latents stored in gr.State as list of (index, score) tuples
+- Checkbox changes update state without re-running latent search
+- Text search uses only selected latents from state
 
 ### 6. Empty Query Handling
 
@@ -202,11 +261,11 @@ SAE Retrieval Tab
 
 | Method | Parameters | Returns | Description |
 |--------|------------|---------|-------------|
-| __init__ | feature_retriever, dataset | None | Initialize with retriever and dataset |
-| search_features | query, mode, k | list[SearchResult] | Delegate to feature_retriever |
-| search_texts | query, mode, k, candidate_k, temperature | list[TextSearchResult] | Latent-based text retrieval |
-| _rerank_features | features, query | list[tuple] | LLM reranking stub |
-| _score_documents | feature_weights, k | list[TextSearchResult] | Compute weighted scores |
+| __init__ | feature_retriever: Retriever, dataset: InterpEmbedDataset | None | Initialize with retriever and dataset |
+| search_latents | query: str, mode: SearchMode, k: int | list[SearchResult] | Phase 1: Find latents by label similarity |
+| search_texts | selected_features: list[tuple[int, float]], temperature: float, k: int | list[TextSearchResult] | Phase 2: Score texts using selected latents |
+| _rerank_features | features: list[tuple[int, float]], query: str | list[tuple[int, float]] | LLM reranking stub |
+| _score_documents | feature_indices: list[int], weights: np.ndarray, k: int | list[TextSearchResult] | Compute weighted scores |
 
 **Note on interp_embed API**: The `sort_by_features()` and `top_documents_for_feature()` methods in interp_embed operate on single features (finding which feature is "top" per document), not on weighted combinations. The weighted sum scoring requires custom implementation using:
 - `dataset._latents` (cached matrix from `latents(aggregation_method)`)
@@ -217,74 +276,81 @@ SAE Retrieval Tab
 ```text
 InterpEmbedRetriever
     |
-    +---(has-a)---> Retriever (for feature label search)
+    +---(has-a)---> Retriever (for latent/feature label search)
     +---(has-a)---> InterpEmbedDataset (wraps interp_embed.Dataset)
     |
-    +---> search_features() -> list[SearchResult]
-    +---> search_texts() -> list[TextSearchResult]
-             |
-             +---> Retriever.search() (step 1)
-             +---> _rerank_features() (step 2, stub)
-             +---> _score_documents() (step 3)
+    +---> search_latents(query, mode, k) -> list[SearchResult]    # Phase 1
+    |         |
+    |         +---> Retriever.search(query, mode, k)
+    |
+    +---> search_texts(selected_features, temperature, k) -> list[TextSearchResult]  # Phase 2
+              |
+              +---> _rerank_features(selected_features, query)
+              +---> _score_documents(feature_indices, weights, k)
 ```
 
 ### Algorithm Details
 
-**Step 1: Retrieve candidate features**
+**Phase 1: search_latents(query, mode, k)**
 ```python
-results = self._feature_retriever.search(query, mode, k=candidate_k)
-candidates = [(r.index, r.score) for r in results]
+# Delegates to composed Retriever
+return self._feature_retriever.search(query, mode, k)
 ```
 
-**Step 2: Rerank (stub)**
+**Phase 2: search_texts(selected_features, temperature, k)**
 ```python
-reranked = self._rerank_features(candidates, query)  # Returns unchanged
-```
+# Rerank (stub - returns unchanged)
+reranked = self._rerank_features(selected_features, query="")
 
-**Step 3: Score documents**
-```python
 # Normalize weights with temperature
 scores = np.array([score for _, score in reranked])
 weights = softmax(scores / temperature)
 
-# Compute document scores using dataset's cached latents
+# Compute document scores
 feature_indices = [idx for idx, _ in reranked]
+return self._score_documents(feature_indices, weights, k)
+```
+
+**_score_documents(feature_indices, weights, k)**
+```python
 latents = self._dataset._latents  # Cached matrix (N x F)
 doc_scores = latents[:, feature_indices] @ weights  # (N,)
 
-# Get texts via interp_embed API
 texts = self._dataset._dataset.documents()
 
-# Sort and return top-k
 top_indices = np.argsort(doc_scores)[::-1][:k]
+return [TextSearchResult(idx, texts[idx][:200], doc_scores[idx]) for idx in top_indices]
 ```
 
 ---
 
 ## Quickstart Additions (US4)
 
-### Scenario 5: SAE Retrieval Tab - Feature Search
+### Scenario 5: Two-Phase Workflow - Complete Flow
 
 1. Load a dataset
 2. Open "SAE Retrieval" tab
-3. Enter a search query
-4. Verify feature label results appear in "Feature Labels" section
+3. Enter a search query, click "Find Latents"
+4. Verify latent results appear with checkboxes (all selected)
+5. Deselect some latents by unchecking boxes
+6. Click "Find Texts"
+7. Verify text results appear based on selected latents only
 
-### Scenario 6: SAE Retrieval Tab - Text Search
+### Scenario 6: Latent Selection Refinement
 
-1. Load a dataset
-2. Open "SAE Retrieval" tab
-3. Enter a search query
-4. Verify text results appear in "Dataset Texts" section
-5. Adjust temperature and observe score distribution changes
+1. Complete Phase 1 (find latents)
+2. Click "Find Texts" with all latents selected
+3. Note the text results
+4. Deselect some latents
+5. Click "Find Texts" again
+6. Verify text results change based on new selection
 
-### Scenario 7: Temperature Parameter Effect
+### Scenario 7: No Latents Selected
 
-1. Enter a query
-2. Set temperature = 0.5 (sharp)
-3. Note which documents score highest
-4. Set temperature = 2.0 (flat)
-5. Observe more diverse document scores
+1. Complete Phase 1 (find latents)
+2. Deselect all latents
+3. Click "Find Texts"
+4. Verify error message appears requiring at least one selection
 
 ---
 

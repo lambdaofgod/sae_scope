@@ -35,7 +35,7 @@ Python 3.10: Follow standard conventions
 ## Recent Changes
 - 002-feature-search-modes: Added Python 3.10 + Gradio 5.x, weaviate-client (existing), numpy
 - 002-feature-search-modes: Added Python 3.10 + Gradio 5.x, weaviate-client (existing), numpy
-- 002-feature-search-modes: Added Python 3.10 + Gradio 5.x, weaviate-client (existing), interp-embed
+- 002-feature-search-modes: Added Python 3.10 + Gradio 5.x, weaviate-client (existing), numpy
 
 
 <!-- MANUAL ADDITIONS START -->
