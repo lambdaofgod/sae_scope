@@ -100,13 +100,55 @@
 
 ---
 
-## Phase 6: Polish and Cross-Cutting Concerns
+## Phase 6: User Story 4 - SAE Retrieval Tab: Two-Phase Text Search (Priority: P4)
+
+**Goal**: Users can search for texts using a two-phase workflow: find latents by query, select which latents to use, then find matching texts based on selected latent activations.
+
+**Independent Test**: Load a dataset, open SAE Retrieval tab, enter a query, click "Find Latents", verify results with checkboxes appear, select/deselect some latents, click "Find Texts", verify text results appear.
+
+### Backend Implementation for User Story 4
+
+- [X] T027 [P] [US4] Create TextSearchResult dataclass in src/sae_scope/backend/retriever/base.py with doc_index, text, score, metadata fields
+- [X] T028 [US4] Export TextSearchResult from src/sae_scope/backend/retriever/__init__.py
+- [X] T029 [P] [US4] Create InterpEmbedRetriever class in src/sae_scope/backend/retriever/interp_embed.py with __init__(feature_retriever, dataset) accepting Retriever and InterpEmbedDataset
+- [X] T030 [US4] Implement search_latents(query, mode, k) method that delegates to composed Retriever.search()
+- [X] T031 [US4] Implement _rerank_features(features, query) stub method that returns input unchanged
+- [X] T032 [US4] Implement _score_documents(feature_indices, weights, k) method using dataset latents matrix
+- [X] T033 [US4] Implement search_texts(selected_features, temperature, k) method with softmax weighting
+- [X] T034 [US4] Export InterpEmbedRetriever from src/sae_scope/backend/retriever/__init__.py
+
+### Frontend Implementation for User Story 4
+
+- [X] T035 [US4] Add "SAE Retrieval" tab to src/sae_scope/frontend/app.py after existing tabs
+- [X] T036 [US4] Add Phase 1 UI components: Search Mode dropdown (default Hybrid), Candidate Count input (default 10), Query textbox, "Find Latents" button
+- [X] T037 [US4] Add Phase 1 results dataframe with checkbox column: Select, Index, Label, Score
+- [X] T038 [US4] Add gr.State for storing selected latents as list of (index, score) tuples
+- [X] T039 [US4] Add Phase 2 UI components: Temperature input (default 1.0, range 0.1-10.0), Max Results input (default 10), "Find Texts" button
+- [X] T040 [US4] Add Phase 2 results dataframe with columns: Index, Text, Score
+- [X] T041 [US4] Initialize InterpEmbedRetriever in on_dataset_select with WeaviateRetriever and loaded dataset
+- [X] T042 [US4] Wire "Find Latents" button to call retriever.search_latents() and populate Phase 1 results with all checkboxes selected
+- [X] T043 [US4] Wire checkbox changes to update selected latents state
+- [X] T044 [US4] Wire "Find Texts" button to call retriever.search_texts() with selected latents from state
+- [X] T045 [US4] Disable "Find Texts" button until latents are retrieved and at least one is selected
+- [X] T046 [US4] Show error message when no latents are selected and user clicks "Find Texts"
+
+### Validation for User Story 4
+
+- [X] T047 [US4] Run quickstart.md Scenario 5: Two-Phase Workflow - Complete Flow
+- [X] T048 [US4] Run quickstart.md Scenario 6: Latent Selection Refinement
+- [X] T049 [US4] Run quickstart.md Scenario 7: No Latents Selected
+
+**Checkpoint**: User Story 4 complete - two-phase text search workflow is functional
+
+---
+
+## Phase 7: Polish and Cross-Cutting Concerns
 
 **Purpose**: Error handling, edge cases, final validation
 
 - [X] T024 Add informative error message when Weaviate is unavailable in src/sae_scope/frontend/app.py
 - [X] T025 Handle empty search results with appropriate messaging
-- [X] T026 Run quickstart.md validation scenarios (all 4 scenarios)
+- [X] T026 Run quickstart.md validation scenarios (all 4 scenarios for US1-3)
 
 ---
 
@@ -119,7 +161,8 @@
 - **User Stories (Phase 3+)**: All depend on Foundational phase completion
   - User Story 2 requires User Story 1 (needs mode selection to exist)
   - User Story 3 requires User Story 2 (needs search to work first)
-- **Polish (Phase 6)**: Depends on all user stories being complete
+  - User Story 4: Independent of US1-3 (uses existing Retriever infrastructure)
+- **Polish (Phase 7)**: Depends on all user stories being complete
 
 ### Within Each User Story
 
@@ -131,6 +174,7 @@
 
 - T005, T006 can run in parallel (different components in same file, but independent)
 - T011 can run in parallel with US1 tasks (different files)
+- T027, T029 can run in parallel (different files: base.py, interp_embed.py)
 
 ---
 
@@ -146,22 +190,20 @@ Task: "Create SearchResult dataclass in src/sae_scope/backend/retriever/base.py"
 
 ## Implementation Strategy
 
-### MVP First (User Story 1 + 2)
+### MVP First (User Story 1 + 2) - COMPLETE
 
-1. Complete Phase 1: Setup (Docker Compose, dependency)
-2. Complete Phase 2: Foundational (abstract Retriever)
-3. Complete Phase 3: User Story 1 (mode selection dropdown)
-4. Complete Phase 4: User Story 2 (search functionality)
-5. **STOP and VALIDATE**: Test all three search modes work
-6. Deploy/demo if ready
+1. Complete Phase 1: Setup (Docker Compose, dependency) - DONE
+2. Complete Phase 2: Foundational (abstract Retriever) - DONE
+3. Complete Phase 3: User Story 1 (mode selection dropdown) - DONE
+4. Complete Phase 4: User Story 2 (search functionality) - DONE
+5. Complete Phase 5: User Story 3 (consistent UI) - DONE
 
-### Incremental Delivery
+### Next: User Story 4 (SAE Retrieval Tab)
 
-1. Complete Setup + Foundational - Foundation ready
-2. Add User Story 1 - Test mode selection - MVP UI ready
-3. Add User Story 2 - Test search - Core feature complete
-4. Add User Story 3 - Test consistency - Full feature complete
-5. Polish - Final validation
+1. Complete backend tasks T027-T034 (InterpEmbedRetriever)
+2. Complete frontend tasks T035-T046 (SAE Retrieval tab UI)
+3. **STOP and VALIDATE**: Run quickstart scenarios 5-7
+4. Polish - Final validation
 
 ---
 

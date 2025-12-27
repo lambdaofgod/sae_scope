@@ -23,6 +23,16 @@ class SearchResult:
     metadata: dict = field(default_factory=dict)
 
 
+@dataclass
+class TextSearchResult:
+    """A single text search result item."""
+
+    doc_index: int
+    text: str
+    score: float
+    metadata: dict = field(default_factory=dict)
+
+
 class Retriever(ABC):
     """Abstract interface for search implementations."""
 
