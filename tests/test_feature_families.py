@@ -5,8 +5,7 @@ from scipy.sparse import csr_matrix
 from sae_scope.backend.feature_families import (
     SAEActivations,
     FeatureGraph,
-    FeatureFamily,
-    find_feature_families,
+    FeatureFamilyGraph,
     compute_cooccurrence_matrix,
 )
 
@@ -68,17 +67,22 @@ def test_feature_graph_builds_mst(test_activations):
     assert graph.directed.number_of_edges() == 3
 
 
-def test_find_feature_families_groups_cooccurring(test_activations):
+def test_feature_family_graph_groups_cooccurring(test_activations):
     sae = SAEActivations.from_activations(test_activations)
 
-    families = find_feature_families(sae, tau=0.1, n_iterations=1)
+    ffg = FeatureFamilyGraph.from_activations(sae, tau=0.1, n_iterations=1)
 
-    # Should find families grouping co-occurring features
-    assert len(families) > 0
-    assert all(isinstance(f, FeatureFamily) for f in families)
+    # Should have families DataFrame with feature_index and root columns
+    assert "feature_index" in ffg.families.columns
+    assert "root" in ffg.families.columns
+    assert len(ffg.families) > 0
 
-    # Check that features 0,1 are in same family or 2,3 are in same family
-    all_indices = [f.feature_indices for f in families]
-    has_01_family = any(0 in idx and 1 in idx for idx in all_indices)
-    has_23_family = any(2 in idx and 3 in idx for idx in all_indices)
+    # Check that features 0,1 share a root or 2,3 share a root
+    root_0 = ffg.get_root_for_feature(0)
+    root_1 = ffg.get_root_for_feature(1)
+    root_2 = ffg.get_root_for_feature(2)
+    root_3 = ffg.get_root_for_feature(3)
+
+    has_01_family = root_0 == root_1
+    has_23_family = root_2 == root_3
     assert has_01_family or has_23_family

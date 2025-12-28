@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import networkx as nx
 import numpy as np
+import pandas as pd
 from numpy.typing import NDArray
 from pydantic import BaseModel, ConfigDict
-from scipy.sparse import spmatrix, csr_matrix
-from sklearn.metrics import pairwise_distances
+from scipy.sparse import spmatrix
 
 
 class SAEActivations(BaseModel):
@@ -33,15 +33,6 @@ class SAEActivations(BaseModel):
         binary = activations > activation_threshold
         frequencies = np.asarray(binary.sum(axis=0)).flatten().astype(np.float32)
         return cls(activations=activations, binary=binary, frequencies=frequencies)
-
-
-class FeatureFamily(BaseModel):
-    """A family of related SAE features."""
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    feature_indices: set[int]
-    root_feature: int  # The highest-density feature (root of subtree)
 
 
 class FeatureGraph:
@@ -99,43 +90,89 @@ class FeatureGraph:
                 directed.add_edge(v, u)
         return directed
 
-    def extract_families(self) -> list[FeatureFamily]:
-        """Extract families via DFS from root nodes (no incoming edges)."""
-        ...
+    def extract_families(self) -> pd.DataFrame:
+        """Extract families via DFS from root nodes (no incoming edges).
+
+        Returns:
+            DataFrame with columns [feature_index, root].
+        """
+        roots = [n for n in self.directed.nodes() if self.directed.in_degree(n) == 0]
+        rows = []
+        for root in roots:
+            descendants = nx.descendants(self.directed, root)
+            for feat in {root} | descendants:
+                rows.append({"feature_index": feat, "root": root})
+        return pd.DataFrame(rows)
 
     def remove_roots(self) -> FeatureGraph:
         """Return new graph with root nodes removed (for iterative refinement)."""
-        ...
+        roots = [n for n in self.directed.nodes() if self.directed.in_degree(n) == 0]
+        remaining = [n for n in self.directed.nodes() if n not in roots]
+        subgraph = self.directed.subgraph(remaining).copy()
+
+        new_graph = object.__new__(FeatureGraph)
+        new_graph.mst = self.mst.subgraph(remaining).copy()
+        new_graph.directed = subgraph
+        return new_graph
 
 
-def find_feature_families(
-    sae_activations: SAEActivations,
-    tau: float = 0.1,
-    n_iterations: int = 3,
-    overlap_threshold: float = 0.6,
-    epsilon: float = 1e-8,
-) -> list[FeatureFamily]:
-    """
-    End-to-end pipeline: SAEActivations -> deduplicated FeatureFamilies.
+class FeatureFamilyGraph(BaseModel):
+    """Feature families with their underlying graph for visualization."""
 
-    Pipeline:
-        1. Compute co-occurrence matrix from activations
-        2. Build FeatureGraph (MST + orientation)
-        3. Extract families via DFS
-        4. Iterate: remove roots, rebuild graph, extract finer families
-        5. Deduplicate overlapping families
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    Args:
-        sae_activations: Wrapped SAE activations with precomputed binary matrix and frequencies.
-        tau: Threshold for normalized co-occurrence matrix.
-        n_iterations: Number of iterations to find finer-grained families.
-        overlap_threshold: Jaccard threshold for deduplicating families.
-        epsilon: Small constant for numerical stability.
+    graph: FeatureGraph
+    families: pd.DataFrame  # columns: [feature_index, root]
 
-    Returns:
-        Deduplicated list of FeatureFamily objects.
-    """
-    ...
+    @classmethod
+    def from_activations(
+        cls,
+        sae_activations: SAEActivations,
+        tau: float = 0.1,
+        n_iterations: int = 3,
+        overlap_threshold: float = 0.6,
+        epsilon: float = 1e-8,
+    ) -> FeatureFamilyGraph:
+        """
+        Build feature families from SAE activations.
+
+        Args:
+            sae_activations: Wrapped SAE activations.
+            tau: Threshold for normalized co-occurrence matrix.
+            n_iterations: Number of iterations to find finer-grained families.
+            overlap_threshold: Jaccard threshold for deduplicating families.
+            epsilon: Small constant for numerical stability.
+        """
+        graph = FeatureGraph.from_cooccurrence(sae_activations, tau, epsilon)
+        all_dfs = []
+
+        current_graph = graph
+        for _ in range(n_iterations):
+            if current_graph.directed.number_of_nodes() == 0:
+                break
+            families_df = current_graph.extract_families()
+            all_dfs.append(families_df)
+            current_graph = current_graph.remove_roots()
+
+        if all_dfs:
+            combined = pd.concat(all_dfs, ignore_index=True)
+            families = deduplicate_families(combined, overlap_threshold)
+        else:
+            families = pd.DataFrame(columns=["feature_index", "root"])
+
+        return cls(graph=graph, families=families)
+
+    def get_family_subgraph(self, root: int) -> nx.DiGraph:
+        """Get the directed subgraph for a specific family."""
+        family_features = self.families[self.families["root"] == root]["feature_index"].tolist()
+        return self.graph.directed.subgraph(family_features).copy()
+
+    def get_root_for_feature(self, feature_idx: int) -> int | None:
+        """Get the root of the family containing this feature."""
+        match = self.families[self.families["feature_index"] == feature_idx]
+        if match.empty:
+            return None
+        return int(match.iloc[0]["root"])
 
 
 def compute_cooccurrence_matrix(
@@ -178,20 +215,75 @@ def compute_cooccurrence_matrix(
 
 
 def deduplicate_families(
-    families: list[FeatureFamily],
+    families: pd.DataFrame,
     overlap_threshold: float,
-) -> list[FeatureFamily]:
+) -> pd.DataFrame:
     """
-    Merge families with high Jaccard overlap using sklearn pairwise_distances.
-
-    Uses jaccard distance: d = 1 - |A & B| / |A | B|
-    Merges families where (1 - d) > overlap_threshold.
+    Merge families with high Jaccard overlap.
 
     Args:
-        families: List of FeatureFamily objects.
-        overlap_threshold: Jaccard similarity threshold (default 0.6).
+        families: DataFrame with columns [feature_index, root].
+        overlap_threshold: Jaccard similarity threshold.
 
     Returns:
-        Deduplicated list of FeatureFamily objects.
+        DataFrame with deduplicated families.
     """
-    ...
+    if families.empty:
+        return families
+
+    roots = families["root"].unique()
+    if len(roots) <= 1:
+        return families
+
+    # Build feature sets per root
+    root_to_features: dict[int, set[int]] = {}
+    for root in roots:
+        root_to_features[root] = set(
+            families[families["root"] == root]["feature_index"].tolist()
+        )
+
+    # Compute Jaccard similarities and merge
+    root_list = list(roots)
+    merged_to: dict[int, int] = {}  # root -> winning root
+
+    for i, root_i in enumerate(root_list):
+        if root_i in merged_to:
+            continue
+        features_i = root_to_features[root_i]
+
+        for j in range(i + 1, len(root_list)):
+            root_j = root_list[j]
+            if root_j in merged_to:
+                continue
+            features_j = root_to_features[root_j]
+
+            intersection = len(features_i & features_j)
+            union = len(features_i | features_j)
+            if union > 0 and intersection / union > overlap_threshold:
+                # Merge j into i (i has larger family or came first)
+                if len(features_j) > len(features_i):
+                    merged_to[root_i] = root_j
+                    features_j |= features_i
+                    root_to_features[root_j] = features_j
+                    break
+                else:
+                    merged_to[root_j] = root_i
+                    features_i |= features_j
+                    root_to_features[root_i] = features_i
+
+    # Build result DataFrame with updated roots
+    def get_final_root(root: int) -> int:
+        while root in merged_to:
+            root = merged_to[root]
+        return root
+
+    result_rows = []
+    seen_features: set[int] = set()
+    for root in roots:
+        final_root = get_final_root(root)
+        for feat in root_to_features[root]:
+            if feat not in seen_features:
+                result_rows.append({"feature_index": feat, "root": final_root})
+                seen_features.add(feat)
+
+    return pd.DataFrame(result_rows)
