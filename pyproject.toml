@@ -21,3 +21,8 @@ packages = ["src/sae_scope"]
 
 [tool.uv.sources]
 interp-embed = { git = "https://github.com/nickjiang2378/interp_embed" }
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
