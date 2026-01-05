@@ -150,6 +150,41 @@ class InterpEmbedDataset(SAELensDataset):
             "text": texts,
         })
 
+    def get_column_names(self) -> list[str]:
+        """
+        Return all column names from the underlying DataFrame.
+
+        Returns:
+            List of column names available in the dataset.
+        """
+        return list(self._dataset.columns)
+
+    def get_text_field(self) -> str:
+        """
+        Return the field name used for SAE training (always displayed in results).
+
+        Returns:
+            The column name containing the text used for SAE training.
+        """
+        return self._text_field
+
+    def get_dataframe_with_columns(self, columns: list[str]) -> pd.DataFrame:
+        """
+        Return DataFrame with specified columns plus index.
+
+        Args:
+            columns: List of column names to include.
+
+        Returns:
+            DataFrame with 'index' column followed by the specified columns.
+
+        Raises:
+            KeyError: If any column name is not in the dataset.
+        """
+        df = self._dataset.pandas()[columns].copy()
+        df.insert(0, "index", range(len(df)))
+        return df
+
     def compute_feature_statistics(self) -> pd.DataFrame:
         """
         Compute statistics for all features.

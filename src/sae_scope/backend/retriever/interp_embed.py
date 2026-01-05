@@ -68,6 +68,7 @@ class InterpEmbedRetriever:
         feature_indices: list[int],
         weights: np.ndarray,
         k: int,
+        selected_columns: list[str] | None = None,
     ) -> list[TextSearchResult]:
         """Compute weighted document scores using latent activations.
 
@@ -75,6 +76,7 @@ class InterpEmbedRetriever:
             feature_indices: List of feature indices to use for scoring.
             weights: Normalized weights for each feature (must sum to 1).
             k: Maximum number of documents to return.
+            selected_columns: List of additional column names to include in results.
 
         Returns:
             List of TextSearchResult objects sorted by score (highest first).
@@ -91,21 +93,38 @@ class InterpEmbedRetriever:
         # Get top-k document indices (sorted by score, descending)
         top_indices = np.argsort(doc_scores)[::-1][:k]
 
-        return [
-            TextSearchResult(
-                doc_index=int(idx),
-                text=texts[idx][:200],  # Truncate to 200 chars for display
-                score=float(doc_scores[idx]),
-                metadata={"feature_indices": feature_indices},
+        # Fetch additional column data if requested
+        column_df = None
+        if selected_columns:
+            column_df = self._dataset.get_dataframe_with_columns(selected_columns)
+
+        results = []
+        for idx in top_indices:
+            # Build column_data dict for this document
+            col_data = {}
+            if column_df is not None and selected_columns:
+                for col in selected_columns:
+                    value = column_df.loc[idx, col]
+                    col_data[col] = value if value is not None else ""
+
+            results.append(
+                TextSearchResult(
+                    doc_index=int(idx),
+                    text=texts[idx][:200],  # Truncate to 200 chars for display
+                    score=float(doc_scores[idx]),
+                    column_data=col_data,
+                    metadata={"feature_indices": feature_indices},
+                )
             )
-            for idx in top_indices
-        ]
+
+        return results
 
     def search_texts(
         self,
         selected_features: list[tuple[int, float]],
         temperature: float = 1.0,
         k: int = 10,
+        selected_columns: list[str] | None = None,
     ) -> list[TextSearchResult]:
         """Phase 2: Find texts using selected latent activations.
 
@@ -113,9 +132,10 @@ class InterpEmbedRetriever:
             selected_features: List of (feature_index, score) tuples.
             temperature: Temperature for softmax weighting (lower = sharper).
             k: Maximum number of texts to return.
+            selected_columns: List of additional column names to include in results.
 
         Returns:
-            List of TextSearchResult objects with doc_index, text, and score.
+            List of TextSearchResult objects with doc_index, text, score, and column_data.
 
         Raises:
             ValueError: If no features are selected.
@@ -134,4 +154,4 @@ class InterpEmbedRetriever:
         weights = _softmax(scores / temperature)
 
         # Score documents and return top-k
-        return self._score_documents(feature_indices, weights, k)
+        return self._score_documents(feature_indices, weights, k, selected_columns)

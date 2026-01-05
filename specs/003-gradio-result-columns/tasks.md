@@ -29,13 +29,13 @@
 
 **Note**: This phase refactors existing functionality without changing behavior
 
-- [ ] T004 Create scatterplot_tab.py with create_scatterplot_ui() and wire_scatterplot_events() in src/sae_scope/frontend/components/scatterplot_tab.py
-- [ ] T005 [P] Create features_tab.py with create_features_ui() and wire_features_events() in src/sae_scope/frontend/components/features_tab.py
-- [ ] T006 [P] Create data_tab.py with create_data_ui() and wire_data_events() in src/sae_scope/frontend/components/data_tab.py
-- [ ] T007 [P] Create sae_retrieval_tab.py with create_sae_retrieval_ui() and wire_sae_retrieval_events() in src/sae_scope/frontend/components/sae_retrieval_tab.py
-- [ ] T008 Update components/__init__.py to export tab modules in src/sae_scope/frontend/components/__init__.py
-- [ ] T009 Refactor app.py to orchestrator pattern importing tab modules in src/sae_scope/frontend/app.py
-- [ ] T010 Verify app launches and all existing functionality works after refactor
+- [x] T004 Create scatterplot_tab.py with create_scatterplot_ui() and wire_scatterplot_events() in src/sae_scope/frontend/components/scatterplot_tab.py
+- [x] T005 [P] Create features_tab.py with create_features_ui() and wire_features_events() in src/sae_scope/frontend/components/features_tab.py
+- [x] T006 [P] Create data_tab.py with create_data_ui() and wire_data_events() in src/sae_scope/frontend/components/data_tab.py
+- [x] T007 [P] Create sae_retrieval_tab.py with create_sae_retrieval_ui() and wire_sae_retrieval_events() in src/sae_scope/frontend/components/sae_retrieval_tab.py
+- [x] T008 Update components/__init__.py to export tab modules in src/sae_scope/frontend/components/__init__.py
+- [x] T009 Refactor app.py to orchestrator pattern importing tab modules in src/sae_scope/frontend/app.py
+- [x] T010 Verify app launches and all existing functionality works after refactor
 
 **Checkpoint**: App runs with refactored tabs - behavior unchanged from before refactor
 
@@ -49,11 +49,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Add column_selector CheckboxGroup component (hidden by default) in src/sae_scope/frontend/app.py
-- [ ] T012 [US1] Update on_dataset_select to call get_column_names() and populate column_selector in src/sae_scope/frontend/app.py
-- [ ] T013 [US1] Add selected_columns to Gradio State in src/sae_scope/frontend/app.py
-- [ ] T014 [US1] Wire column_selector change event to update selected_columns state in src/sae_scope/frontend/app.py
-- [ ] T015 [US1] Handle edge case: dataset with only text column (empty/disabled selector) in src/sae_scope/frontend/app.py
+- [x] T011 [US1] Add column_selector CheckboxGroup component (hidden by default) in src/sae_scope/frontend/app.py
+- [x] T012 [US1] Update on_dataset_select to call get_column_names() and populate column_selector in src/sae_scope/frontend/app.py
+- [x] T013 [US1] Add selected_columns to Gradio State in src/sae_scope/frontend/app.py
+- [x] T014 [US1] Wire column_selector change event to update selected_columns state in src/sae_scope/frontend/app.py
+- [x] T015 [US1] Handle edge case: dataset with only text column (empty/disabled selector) in src/sae_scope/frontend/app.py
 
 **Checkpoint**: Column selector appears after dataset load, selection updates state
 
@@ -67,11 +67,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T016 [US2] Update TextSearchResult to include column data from dataset in src/sae_scope/backend/retriever/base.py
-- [ ] T017 [US2] Modify InterpEmbedRetriever._score_documents() to fetch additional column values in src/sae_scope/backend/retriever/interp_embed.py
-- [ ] T018 [US2] Update on_find_texts to pass selected_columns and format results with additional columns in src/sae_scope/frontend/components/sae_retrieval_tab.py
-- [ ] T019 [US2] Update text_results Dataframe headers dynamically based on selected columns in src/sae_scope/frontend/components/sae_retrieval_tab.py
-- [ ] T020 [US2] Handle null/empty column values with placeholder display in src/sae_scope/frontend/components/sae_retrieval_tab.py
+- [x] T016 [US2] Update TextSearchResult to include column data from dataset in src/sae_scope/backend/retriever/base.py
+- [x] T017 [US2] Modify InterpEmbedRetriever._score_documents() to fetch additional column values in src/sae_scope/backend/retriever/interp_embed.py
+- [x] T018 [US2] Update on_find_texts to pass selected_columns and format results with additional columns in src/sae_scope/frontend/components/sae_retrieval_tab.py
+- [x] T019 [US2] Update text_results Dataframe headers dynamically based on selected columns in src/sae_scope/frontend/components/sae_retrieval_tab.py
+- [x] T020 [US2] Handle null/empty column values with placeholder display in src/sae_scope/frontend/components/sae_retrieval_tab.py
 
 **Checkpoint**: Search results show text + all selected additional columns
 

@@ -30,6 +30,7 @@ class TextSearchResult:
     doc_index: int
     text: str
     score: float
+    column_data: dict = field(default_factory=dict)
     metadata: dict = field(default_factory=dict)
 
 
