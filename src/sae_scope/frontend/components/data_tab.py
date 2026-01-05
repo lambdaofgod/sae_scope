@@ -52,10 +52,10 @@ def wire_data_events(
 
         t0 = time.time()
         # Get the text field name and build column list
+        # Selected columns come BEFORE text column
         text_field = dataset.get_text_field()
-        columns_to_show = [text_field]
-        if selected_columns:
-            columns_to_show.extend(selected_columns)
+        columns_to_show = list(selected_columns) if selected_columns else []
+        columns_to_show.append(text_field)
 
         result = dataset.get_dataframe_with_columns(columns_to_show)
         print(f"[TIMING]   get_dataframe_with_columns: {time.time() - t0:.3f}s")

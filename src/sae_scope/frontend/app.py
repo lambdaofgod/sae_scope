@@ -279,9 +279,9 @@ def create_app() -> gr.Blocks:
                 return selected, None
 
             text_field = dataset.get_text_field()
-            columns_to_show = [text_field]
-            if selected:
-                columns_to_show.extend(selected)
+            # Selected columns come BEFORE text column
+            columns_to_show = list(selected) if selected else []
+            columns_to_show.append(text_field)
 
             data_df = dataset.get_dataframe_with_columns(columns_to_show)
             return selected, data_df

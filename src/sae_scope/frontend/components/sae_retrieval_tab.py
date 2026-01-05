@@ -238,10 +238,12 @@ def wire_sae_retrieval_events(
             f"[TIMING] on_find_texts START n_latents={len(selected_features)} temp={temperature}"
         )
 
-        # Build headers: Index, Text, Score, + selected columns
-        headers = ["Index", "Text", "Score"]
+        # Build headers: Index, [selected columns], Text, Score
+        # Selected columns come BEFORE text column
+        headers = ["Index"]
         if selected_columns:
             headers.extend(selected_columns)
+        headers.extend(["Text", "Score"])
 
         try:
             results = interp_retriever.search_texts(
@@ -252,8 +254,9 @@ def wire_sae_retrieval_events(
             )
             formatted = []
             for r in results:
-                row = [r.doc_index, r.text[:200], round(r.score, 6)]
-                # Add column values (T020: handle null/empty with placeholder)
+                # Build row: Index, [selected column values], Text, Score
+                row = [r.doc_index]
+                # Add column values BEFORE text (T020: handle null/empty with placeholder)
                 if selected_columns:
                     for col in selected_columns:
                         value = r.column_data.get(col, "")
@@ -264,6 +267,7 @@ def wire_sae_retrieval_events(
                             row.append("-")
                         else:
                             row.append(str(value))
+                row.extend([r.text[:200], round(r.score, 6)])
                 formatted.append(row)
         except NotImplementedError:
             # Backend not yet implemented - show placeholder message

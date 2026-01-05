@@ -77,14 +77,13 @@
 
 ---
 
-## Phase 5: Polish & Validation
+## Phase 5: User Story 3 - Display Selected Columns Before Text Column (Priority: P2)
 
-**Purpose**: Final validation and edge case handling
+**Goal**: Selected columns appear BEFORE the text column in all result displays
 
-- [ ] T021 Verify column selection persists across multiple searches in same session
-- [ ] T022 Test with eu5_review_dataset.pkl (2 columns: text, section_header)
-- [ ] T023 Test with roam_df20250217.pkl (8 columns: multiple additional columns)
-- [ ] T024 Run quickstart.md validation scenario
+### Implementation for User Story 3
+
+- [x] T021 [US3] Change column ordering in frontend callers to pass selected_columns before text_field (swap order in app.py, data_tab.py, sae_retrieval_tab.py)
 
 ---
 
