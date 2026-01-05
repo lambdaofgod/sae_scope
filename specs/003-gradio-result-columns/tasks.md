@@ -87,6 +87,63 @@
 
 ---
 
+## Phase 6: User Story 4 - Reusable Search Component (Priority: P2)
+
+**Goal**: Extract reusable search UI component that works for both feature search and text search
+
+**Independent Test**: Verify search UI appears identically in both Features and Data tabs with same controls
+
+### Implementation for User Story 4
+
+- [x] T022 [US4] Create search_component.py with create_search_ui() factory function in src/sae_scope/frontend/components/search_component.py
+- [x] T023 [US4] Update components/__init__.py to export create_search_ui in src/sae_scope/frontend/components/__init__.py
+
+**Checkpoint**: Reusable search component available for use by tabs
+
+---
+
+## Phase 7: User Story 5 - Text Search in Data Tab (Priority: P2)
+
+**Goal**: Data tab has text search functionality with results above a collapsed DataFrame accordion
+
+**Independent Test**: Load dataset, search texts in Data tab, verify results appear above collapsed "All Data" accordion
+
+### Implementation for User Story 5
+
+- [ ] T024 [US5] Add search_texts_by_query() method to InterpEmbedRetriever in src/sae_scope/backend/retriever/interp_embed.py
+- [ ] T025 [US5] Ensure text collection indexed in Weaviate (add ensure_texts_indexed() or similar) in src/sae_scope/backend/retriever/interp_embed.py
+- [ ] T026 [US5] Refactor data_tab.py to use create_search_ui() component in src/sae_scope/frontend/components/data_tab.py
+- [ ] T027 [US5] Add gr.Accordion wrapper for existing DataFrame in data_tab.py in src/sae_scope/frontend/components/data_tab.py
+- [ ] T028 [US5] Wire text search events in data_tab.py to call retriever.search_texts_by_query() in src/sae_scope/frontend/components/data_tab.py
+
+**Checkpoint**: Data tab has text search above collapsed DataFrame accordion
+
+---
+
+## Phase 8: User Story 6 - Refactor Features Tab to Use Reusable Component (Priority: P3)
+
+**Goal**: Features tab uses the same reusable search component for consistency
+
+**Independent Test**: Verify Features tab search works exactly as before after refactor
+
+### Implementation for User Story 6
+
+- [ ] T029 [US6] Refactor features_tab.py to use create_search_ui() instead of inline search UI in src/sae_scope/frontend/components/features_tab.py
+- [ ] T030 [US6] Verify feature search functionality unchanged after refactor
+
+**Checkpoint**: Both tabs use consistent search component pattern
+
+---
+
+## Phase 9: Polish & Validation
+
+**Purpose**: Final validation and cleanup
+
+- [ ] T031 Run quickstart.md validation - test all search scenarios
+- [ ] T032 Verify both tabs have identical search UI layout
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -95,7 +152,11 @@
 - **Phase 2 (Foundational)**: Depends on Phase 1 - BLOCKS user stories
 - **Phase 3 (US1)**: Depends on Phase 2 completion
 - **Phase 4 (US2)**: Depends on Phase 3 (needs column selection working)
-- **Phase 5 (Polish)**: Depends on Phase 4 completion
+- **Phase 5 (US3)**: Depends on Phase 4 completion
+- **Phase 6 (US4)**: No dependencies on other stories - can run in parallel
+- **Phase 7 (US5)**: Depends on Phase 6 (needs reusable search component)
+- **Phase 8 (US6)**: Depends on Phase 6 (needs reusable search component)
+- **Phase 9 (Polish)**: Depends on all user story phases
 
 ### Within Each Phase
 
@@ -104,6 +165,9 @@
 - T008-T009: Sequential (depend on T004-T007)
 - T011-T015: Sequential within US1 (same file, incremental changes)
 - T016-T020: Sequential within US2 (depends on T016 changes)
+- T022-T023: Sequential within US4 (T023 depends on T022)
+- T024-T028: Sequential within US5 (backend first, then frontend refactor)
+- T029-T030: Sequential within US6 (refactor then verify)
 
 ### Parallel Opportunities
 
@@ -112,6 +176,10 @@ Phase 2 (after T004):
   T005 [P] features_tab.py
   T006 [P] data_tab.py
   T007 [P] sae_retrieval_tab.py
+
+Phase 7 and Phase 8 (after Phase 6 complete):
+  Phase 7 (US5 - Data tab text search) can run in parallel with
+  Phase 8 (US6 - Features tab refactor)
 ```
 
 ---
@@ -120,16 +188,23 @@ Phase 2 (after T004):
 
 ### MVP First (Through User Story 1)
 
-1. Complete Phase 1: Backend methods (T001-T003)
-2. Complete Phase 2: Frontend refactor (T004-T010)
-3. Complete Phase 3: Column selector UI (T011-T015)
-4. **STOP and VALIDATE**: Column selector works, selection updates state
+1. Complete Phase 1: Backend methods (T001-T003) - DONE
+2. Complete Phase 2: Frontend refactor (T004-T010) - DONE
+3. Complete Phase 3: Column selector UI (T011-T015) - DONE
+4. **STOP and VALIDATE**: Column selector works, selection updates state - DONE
 
-### Full Feature
+### Column Display Feature (Through User Story 3)
 
-1. Complete MVP above
-2. Complete Phase 4: Results display (T016-T020)
-3. Complete Phase 5: Polish and validation (T021-T024)
+1. Complete MVP above - DONE
+2. Complete Phase 4: Results display (T016-T020) - DONE
+3. Complete Phase 5: Column ordering (T021) - DONE
+
+### Data Tab Search Feature (New)
+
+1. Complete Phase 6: Reusable search component (T022-T023)
+2. Complete Phase 7: Data tab text search (T024-T028)
+3. Complete Phase 8: Features tab refactor (T029-T030)
+4. Complete Phase 9: Polish and validation (T031-T032)
 
 ---
 
@@ -139,3 +214,5 @@ Phase 2 (after T004):
 - Phase 2 is a pure refactor - existing behavior must be preserved
 - User Story 2 builds on User Story 1 (not parallelizable)
 - Column selection affects SAE Retrieval tab results only (Data tab already shows full DataFrame)
+- Phase 6-8 add text search to Data tab with reusable component pattern
+- Features tab refactor (Phase 8) preserves existing functionality while using new component

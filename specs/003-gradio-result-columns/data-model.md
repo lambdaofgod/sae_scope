@@ -1,74 +1,62 @@
-# Data Model: Gradio Result Columns Configuration
+# Data Model: Data Tab Refactor with Text Search
 
 ## Entities
 
-### Dataset (existing - InterpEmbedDataset)
+### TextSearchResult (new concept)
 
 | Field | Type | Description |
 |-------|------|-------------|
-| _dataset | interp_embed.Dataset | Underlying dataset from interp-embed library |
-| _latents | np.ndarray | Activation matrix (N docs x F features) |
-| _aggregation_method | str | How latents are aggregated |
-| _feature_stats | pd.DataFrame | Computed feature statistics |
+| index | int | Document index in dataset |
+| text | str | Document text (truncated for display) |
+| score | float | Search relevance score |
+| column_data | dict | Additional column values from dataset |
 
-**New Methods**:
+### Weaviate Collections
 
-```python
-def get_column_names(self) -> list[str]:
-    """Return all column names from the underlying DataFrame."""
-    return list(self._dataset._df.columns)
+**Existing**: `{dataset_name}_features` - Feature labels for semantic search
 
-def get_text_field(self) -> str:
-    """Return the field name used for SAE training (always displayed)."""
-    return self._dataset._field
-
-def get_dataframe_with_columns(self, columns: list[str]) -> pd.DataFrame:
-    """Return DataFrame with specified columns plus index."""
-    df = self._dataset._df[columns].copy()
-    df.insert(0, 'index', range(len(df)))
-    return df
-```
-
-### Column Selection State (new - Gradio State)
+**New**: `{dataset_name}_texts` - Document texts for semantic search
 
 | Field | Type | Description |
 |-------|------|-------------|
-| available_columns | list[str] | All columns except text field |
-| selected_columns | list[str] | User-selected additional columns |
-
-**Lifecycle**:
-1. Created empty on app init
-2. Populated when dataset loads
-3. Updated when user changes selection
-4. Used when displaying search results
+| doc_index | int | Index in original dataset |
+| content | str | Full document text |
 
 ## Data Flow
 
 ```text
-[Dataset Pickle]
+[User enters query in Data tab]
     |
     v
-[InterpEmbedDataset.load()]
-    |
-    +---> get_column_names() --> [available_columns]
-    |
-    +---> get_text_field() --> [text_column] (always shown)
+[WeaviateRetriever.search() on texts collection]
     |
     v
-[User selects columns in CheckboxGroup]
+[Get top-k document indices + scores]
     |
     v
-[selected_columns state updated]
+[InterpEmbedDataset.get_dataframe_with_columns()]
     |
     v
-[Search executed]
-    |
-    v
-[get_dataframe_with_columns([text_col] + selected)] --> [Results display]
+[Return DataFrame: index, selected_columns, text, Score]
 ```
 
-## Validation Rules
+## Component Relationships
 
-- `selected_columns` must be subset of `available_columns`
-- `text_field` is never in `available_columns` (always displayed separately)
-- Empty `selected_columns` is valid (shows only text column)
+```text
+create_search_ui() --> returns dict of Gradio components
+    |
+    +-- search_mode: gr.Dropdown
+    +-- max_results: gr.Number
+    +-- query: gr.Textbox
+    +-- search_btn: gr.Button
+    +-- results: gr.Dataframe
+
+data_tab uses:
+    +-- create_search_ui() for text search
+    +-- gr.Accordion for full data view
+    +-- WeaviateRetriever for text search backend
+
+features_tab uses:
+    +-- create_search_ui() for feature search (refactored)
+    +-- WeaviateRetriever for feature search backend
+```

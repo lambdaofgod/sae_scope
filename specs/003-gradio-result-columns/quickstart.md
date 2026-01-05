@@ -1,4 +1,4 @@
-# Quickstart: Gradio Result Columns Configuration
+# Quickstart: Data Tab Refactor with Text Search
 
 ## Prerequisites
 
@@ -22,32 +22,30 @@ docker-compose up -d
 uv run python -m sae_scope.frontend
 ```
 
-## Testing Column Selection
+## Testing Text Search
 
 1. Select a dataset from dropdown (e.g., `roam_df20250217.pkl`)
-2. After load completes, column selector appears below aggregation dropdown
-3. Select additional columns to display (e.g., `file_name`, `heading`)
-4. Navigate to SAE Retrieval tab
-5. Enter query and click "Find Latents"
-6. Click "Find Texts"
-7. Results table now shows: Index, Text, Score, plus selected columns
+2. Click "Load Dataset"
+3. Optionally select additional columns to display
+4. Click "Apply"
+5. Navigate to **Data** tab
+6. In the "Search Texts" section:
+   - Select search mode (Lexical, Vector, or Hybrid)
+   - Enter a query (e.g., "game review")
+   - Set max results
+   - Click "Search"
+7. Results appear with: index, selected columns, text, Score
+8. Expand "All Data" accordion to see full dataset
 
-## Development
+## Testing Reusable Component
 
-### Running Tests
+Verify the same search UI pattern appears in:
+- **Data** tab (text search)
+- **Features** tab (feature label search)
 
-```bash
-uv run pytest tests/
-```
-
-### File Structure After Refactor
-
-```text
-src/sae_scope/frontend/
-  app.py                 # Orchestrator (~100 lines)
-  components/
-    scatterplot_tab.py   # Scatterplot tab
-    features_tab.py      # Features tab
-    data_tab.py          # Data tab
-    sae_retrieval_tab.py # SAE Retrieval tab
-```
+Both should have identical UI layout:
+- Search Mode dropdown
+- Max Results number input
+- Query textbox
+- Search button
+- Results dataframe

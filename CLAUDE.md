@@ -15,6 +15,7 @@ Auto-generated from all feature plans. Last updated: 2025-12-18
 - Python 3.10 + Gradio 5.x, weaviate-client (existing), numpy (002-feature-search-modes)
 - Weaviate vector database (for feature label search) (002-feature-search-modes)
 - Python 3.10 + Gradio 5.x, Pandas, Plotly Express (003-gradio-result-columns)
+- Python 3.10 + Gradio 5.x, Pandas, Weaviate (003-gradio-result-columns)
 
 - Python 3.10 + Gradio (frontend), Plotly Express (scatterplot), Pandas (dataframes), interp-embed (existing dependency) (001-sae-scope-dashboard-v0-1)
 
@@ -34,8 +35,8 @@ cd src [ONLY COMMANDS FOR ACTIVE TECHNOLOGIES][ONLY COMMANDS FOR ACTIVE TECHNOLO
 Python 3.10: Follow standard conventions
 
 ## Recent Changes
+- 003-gradio-result-columns: Added Python 3.10 + Gradio 5.x, Pandas, Weaviate
 - 003-gradio-result-columns: Added Python 3.10 + Gradio 5.x, Pandas, Plotly Express
-- 002-feature-search-modes: Added Python 3.10 + Gradio 5.x, weaviate-client (existing), numpy
 - 002-feature-search-modes: Added Python 3.10 + Gradio 5.x, weaviate-client (existing), numpy
 
 
