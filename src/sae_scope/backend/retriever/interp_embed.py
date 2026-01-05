@@ -1,6 +1,7 @@
 """InterpEmbedRetriever for two-phase text search."""
 
 import numpy as np
+import pandas as pd
 
 from sae_scope.backend.interp_dataset import InterpEmbedDataset
 from sae_scope.backend.retriever.base import Retriever, SearchMode, SearchResult, TextSearchResult
@@ -155,3 +156,60 @@ class InterpEmbedRetriever:
 
         # Score documents and return top-k
         return self._score_documents(feature_indices, weights, k, selected_columns)
+
+    def search_texts_dataframe(
+        self,
+        selected_features: list[tuple[int, float]],
+        temperature: float = 1.0,
+        k: int = 10,
+        selected_columns: list[str] | None = None,
+    ) -> pd.DataFrame:
+        """Phase 2: Find texts and return results as a DataFrame.
+
+        Args:
+            selected_features: List of (feature_index, score) tuples.
+            temperature: Temperature for softmax weighting (lower = sharper).
+            k: Maximum number of texts to return.
+            selected_columns: List of additional column names to include in results.
+
+        Returns:
+            DataFrame with columns: index, [selected_columns], text_field, Score.
+
+        Raises:
+            ValueError: If no features are selected.
+        """
+        if not selected_features:
+            raise ValueError("At least one feature must be selected")
+
+        # Rerank features (stub - returns unchanged)
+        reranked = self._rerank_features(selected_features, query="")
+
+        # Extract indices and scores
+        feature_indices = [idx for idx, _ in reranked]
+        scores = np.array([score for _, score in reranked])
+
+        # Compute softmax weights with temperature
+        weights = _softmax(scores / temperature)
+
+        # Get latents matrix and compute document scores
+        latents = self._dataset._latents
+        doc_scores = latents[:, feature_indices] @ weights
+
+        # Get top-k document indices (sorted by score, descending)
+        top_indices = np.argsort(doc_scores)[::-1][:k]
+
+        # Build column list: selected_columns + text_field
+        text_field = self._dataset.get_text_field()
+        columns = list(selected_columns) + [text_field] if selected_columns else [text_field]
+
+        # Get DataFrame with selected columns for top-k rows
+        full_df = self._dataset.get_dataframe_with_columns(columns)
+        result_df = full_df.iloc[top_indices].copy()
+
+        # Add Score column at the end
+        result_df["Score"] = [round(doc_scores[i], 6) for i in top_indices]
+
+        # Truncate text for display
+        result_df[text_field] = result_df[text_field].astype(str).str[:200]
+
+        return result_df

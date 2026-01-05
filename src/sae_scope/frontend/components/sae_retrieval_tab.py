@@ -206,7 +206,7 @@ def wire_sae_retrieval_events(
             selected_columns: List of additional column names to display.
 
         Returns:
-            gr.update with data rows and dynamic headers.
+            gr.update with DataFrame.
         """
         interp_retriever = get_interp_retriever()
 
@@ -238,43 +238,16 @@ def wire_sae_retrieval_events(
             f"[TIMING] on_find_texts START n_latents={len(selected_features)} temp={temperature}"
         )
 
-        # Build headers: Index, [selected columns], Text, Score
-        # Selected columns come BEFORE text column
-        headers = ["Index"]
-        if selected_columns:
-            headers.extend(selected_columns)
-        headers.extend(["Text", "Score"])
-
-        try:
-            results = interp_retriever.search_texts(
-                selected_features,
-                float(temperature),
-                int(max_results),
-                selected_columns=selected_columns if selected_columns else None,
-            )
-            formatted = []
-            for r in results:
-                # Build row: Index, [selected column values], Text, Score
-                row = [r.doc_index]
-                # Add column values BEFORE text (T020: handle null/empty with placeholder)
-                if selected_columns:
-                    for col in selected_columns:
-                        value = r.column_data.get(col, "")
-                        # Handle null, None, NaN, or empty values
-                        if value is None or (isinstance(value, float) and value != value):
-                            row.append("-")
-                        elif value == "":
-                            row.append("-")
-                        else:
-                            row.append(str(value))
-                row.extend([r.text[:200], round(r.score, 6)])
-                formatted.append(row)
-        except NotImplementedError:
-            # Backend not yet implemented - show placeholder message
-            formatted = [[0, "(search_texts not yet implemented)", 0.0]]
+        # Get results as DataFrame - pandas handles all column formatting
+        result_df = interp_retriever.search_texts_dataframe(
+            selected_features,
+            float(temperature),
+            int(max_results),
+            selected_columns=selected_columns if selected_columns else None,
+        )
 
         print(f"[TIMING] on_find_texts END: {time.time() - start:.3f}s")
-        return gr.update(value=formatted, headers=headers)
+        return gr.update(value=result_df)
 
     # Wire SAE Retrieval tab - Find Latents button
     components["find_latents_btn"].click(
