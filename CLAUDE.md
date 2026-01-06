@@ -36,8 +36,8 @@ Python 3.10: Follow standard conventions
 
 ## Recent Changes
 - 003-gradio-result-columns: Added Python 3.10 + Gradio 5.x, Pandas, Weaviate
+- 003-gradio-result-columns: Added Python 3.10 + Gradio 5.x, Pandas, Weaviate
 - 003-gradio-result-columns: Added Python 3.10 + Gradio 5.x, Pandas, Plotly Express
-- 002-feature-search-modes: Added Python 3.10 + Gradio 5.x, weaviate-client (existing), numpy
 
 
 <!-- MANUAL ADDITIONS START -->

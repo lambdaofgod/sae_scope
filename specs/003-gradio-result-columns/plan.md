@@ -194,3 +194,43 @@ src/sae_scope/
 3. **Phase 3**: Refactor Data tab (search + accordion)
 4. **Phase 4**: Refactor Features tab to use reusable component
 5. **Phase 5**: Testing and validation
+6. **Phase 6**: Create HTMLTableElement for search results
+
+---
+
+## Phase 6: HTMLTableElement for Search Results
+
+### Problem
+
+`gr.Dataframe(wrap=True)` does not provide adequate text wrapping for search results - columns remain too wide.
+
+### Solution
+
+Create `HTMLTableElement` class that generates HTML tables with CSS for proper text wrapping. Replace `gr.Dataframe` with `gr.HTML` in search component only.
+
+### Design
+
+```python
+# src/sae_scope/frontend/components/html_table.py
+
+class HTMLTableElement:
+    """HTML table generator with proper text wrapping."""
+
+    def __init__(self, df: pd.DataFrame, max_width: int = 400):
+        self._df = df
+        self._max_width = max_width
+
+    def html(self) -> str:
+        """Return HTML string for gr.HTML component."""
+        # Inline CSS + table HTML
+        ...
+```
+
+### Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/sae_scope/frontend/components/html_table.py` | NEW: HTMLTableElement class |
+| `src/sae_scope/frontend/components/search_component.py` | Replace gr.Dataframe with gr.HTML |
+| `src/sae_scope/frontend/components/data_tab.py` | Update handler to return HTMLTableElement.html() |
+| `src/sae_scope/frontend/components/features_tab.py` | Update handler to return HTMLTableElement.html() |

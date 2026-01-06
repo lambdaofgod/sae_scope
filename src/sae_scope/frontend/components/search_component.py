@@ -29,7 +29,7 @@ def create_search_ui(
         - max_results: Number input for result limit
         - query: Textbox for search query
         - search_btn: Search button
-        - results: Dataframe for displaying results
+        - results: HTML component for displaying results
     """
     with gr.Row():
         search_mode = gr.Dropdown(
@@ -51,12 +51,7 @@ def create_search_ui(
         placeholder=placeholder,
     )
     search_btn = gr.Button("Search")
-    results = gr.Dataframe(
-        label=results_label,
-        interactive=False,
-        datatype="markdown",
-        wrap=True,
-    )
+    results = gr.HTML(label=results_label)
 
     return {
         "search_mode": search_mode,

@@ -20,6 +20,7 @@ from sae_scope.frontend.components.scatterplot_tab import (
     create_scatterplot_ui,
     wire_scatterplot_events,
 )
+from sae_scope.frontend.components.html_table import HTMLTableElement
 from sae_scope.frontend.components.search_component import create_search_ui
 from sae_scope.frontend.components.tabs import create_tabs
 
@@ -42,6 +43,7 @@ __all__ = [
     "wire_sae_retrieval_events",
     # Reusable components
     "create_search_ui",
+    "HTMLTableElement",
     # Legacy
     "create_tabs",
 ]

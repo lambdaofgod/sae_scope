@@ -144,6 +144,24 @@
 
 ---
 
+## Phase 10: User Story 7 - HTMLTableElement for Search Results (Priority: P2)
+
+**Goal**: Replace gr.Dataframe with custom HTML table for proper text wrapping in search results
+
+**Independent Test**: Perform search, verify text columns wrap properly within specified max-width
+
+### Implementation for User Story 7
+
+- [x] T033 [US7] Create HTMLTableElement class with html() method in src/sae_scope/frontend/components/html_table.py
+- [x] T034 [US7] Update components/__init__.py to export HTMLTableElement in src/sae_scope/frontend/components/__init__.py
+- [x] T035 [US7] Replace gr.Dataframe with gr.HTML in search_component.py in src/sae_scope/frontend/components/search_component.py
+- [x] T036 [US7] Update data_tab.py search handler to return HTMLTableElement.html() in src/sae_scope/frontend/components/data_tab.py
+- [x] T037 [US7] Update features_tab.py search handler to return HTMLTableElement.html() in src/sae_scope/frontend/components/features_tab.py
+
+**Checkpoint**: Search results display with proper text wrapping in HTML tables
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -157,6 +175,7 @@
 - **Phase 7 (US5)**: Depends on Phase 6 (needs reusable search component)
 - **Phase 8 (US6)**: Depends on Phase 6 (needs reusable search component)
 - **Phase 9 (Polish)**: Depends on all user story phases
+- **Phase 10 (US7)**: Depends on Phase 6, 7, 8 (needs search component and tabs using it)
 
 ### Within Each Phase
 
@@ -168,6 +187,7 @@
 - T022-T023: Sequential within US4 (T023 depends on T022)
 - T024-T028: Sequential within US5 (backend first, then frontend refactor)
 - T029-T030: Sequential within US6 (refactor then verify)
+- T033-T037: Sequential within US7 (create class, export, update components)
 
 ### Parallel Opportunities
 
@@ -206,6 +226,11 @@ Phase 7 and Phase 8 (after Phase 6 complete):
 3. Complete Phase 8: Features tab refactor (T029-T030)
 4. Complete Phase 9: Polish and validation (T031-T032)
 
+### HTMLTableElement Feature (New)
+
+1. Complete Phases 6-8 above (search component must be in use)
+2. Complete Phase 10: HTMLTableElement for search results (T033-T037)
+
 ---
 
 ## Notes
@@ -216,3 +241,4 @@ Phase 7 and Phase 8 (after Phase 6 complete):
 - Column selection affects SAE Retrieval tab results only (Data tab already shows full DataFrame)
 - Phase 6-8 add text search to Data tab with reusable component pattern
 - Features tab refactor (Phase 8) preserves existing functionality while using new component
+- Phase 10 replaces gr.Dataframe with gr.HTML + HTMLTableElement for proper text wrapping

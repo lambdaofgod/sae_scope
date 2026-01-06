@@ -78,3 +78,57 @@ search_components["search_btn"].click(
     outputs=[search_components["results"]],
 )
 ```
+
+## R6: HTMLTableElement for Text Wrapping
+
+**Decision**: Create `HTMLTableElement` class to replace `gr.Dataframe` for search results with proper text wrapping
+
+**Rationale**:
+- `gr.Dataframe(wrap=True)` has inconsistent behavior - text still appears too wide
+- Custom HTML table with CSS gives full control over text wrapping
+- `gr.HTML` component can display raw HTML strings
+- Pandas `to_html()` provides base HTML generation
+
+**Design**:
+```python
+class HTMLTableElement:
+    """HTML table generator with proper text wrapping for long fields."""
+
+    def __init__(self, df: pd.DataFrame, max_width: int = 400):
+        self._df = df
+        self._max_width = max_width
+
+    def html(self) -> str:
+        """Return HTML string suitable for gr.HTML component."""
+        # Generate table HTML with CSS for text wrapping
+        ...
+```
+
+**CSS Approach**:
+```css
+table.sae-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+table.sae-table td, table.sae-table th {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+    vertical-align: top;
+}
+table.sae-table td {
+    white-space: normal;
+    word-wrap: break-word;
+    max-width: 400px;
+}
+```
+
+**Alternatives considered**:
+- `gr.Dataframe(wrap=True, datatype="markdown")`: Tested but text columns still too wide
+- External table library (e.g., DataTables.js): Rejected - adds complexity, Gradio CSS isolation issues
+- CSS-only fix on gr.Dataframe: Already attempted, insufficient control
+
+**Implementation notes**:
+- Use inline `<style>` in HTML string for self-contained styling
+- Escape HTML entities in cell values to prevent XSS
+- Support optional column width configuration per column

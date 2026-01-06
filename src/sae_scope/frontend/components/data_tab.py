@@ -8,6 +8,7 @@ import pandas as pd
 from sae_scope.backend.dataset import SAELensDataset
 from sae_scope.backend.retriever import SearchMode
 from sae_scope.backend.retriever.interp_embed import InterpEmbedRetriever
+from sae_scope.frontend.components.html_table import HTMLTableElement
 from sae_scope.frontend.components.search_component import create_search_ui
 
 
@@ -92,7 +93,7 @@ def wire_data_events(
         max_results: int,
         dataset: SAELensDataset | None,
         selected_columns: list[str],
-    ) -> pd.DataFrame | None:
+    ) -> str:
         """Handle text search button click."""
         start = time.time()
         print(
@@ -101,18 +102,18 @@ def wire_data_events(
 
         if dataset is None:
             print(f"[TIMING] on_text_search END (no dataset): {time.time() - start:.3f}s")
-            return None
+            return HTMLTableElement(None).html()
 
         interp_retriever = get_interp_retriever()
         texts_collection = get_texts_collection()
 
         if interp_retriever is None or texts_collection is None:
             print(f"[TIMING] on_text_search END (no retriever/collection): {time.time() - start:.3f}s")
-            return None
+            return HTMLTableElement(None).html()
 
         if not query.strip():
             print(f"[TIMING] on_text_search END (empty query): {time.time() - start:.3f}s")
-            return None
+            return HTMLTableElement(None).html()
 
         mode = SearchMode[search_mode.upper()]
         result_df = interp_retriever.search_texts_by_query(
@@ -124,7 +125,7 @@ def wire_data_events(
         )
 
         print(f"[TIMING] on_text_search END: {time.time() - start:.3f}s")
-        return gr.update(value=result_df)
+        return HTMLTableElement(result_df).html()
 
     # Wire data tab select event (for accordion data)
     components["tab"].select(

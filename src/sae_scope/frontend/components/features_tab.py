@@ -7,6 +7,7 @@ import pandas as pd
 
 from sae_scope.backend.dataset import SAELensDataset
 from sae_scope.backend.retriever import SearchMode, WeaviateRetriever
+from sae_scope.frontend.components.html_table import HTMLTableElement
 from sae_scope.frontend.components.search_component import create_search_ui
 
 
@@ -201,7 +202,7 @@ def wire_features_events(
         search_mode: str,
         k: int,
         dataset: SAELensDataset | None,
-    ) -> list[list[str | int]]:
+    ) -> str:
         """
         Handle feature search button click.
 
@@ -212,7 +213,7 @@ def wire_features_events(
             dataset: Current dataset or None.
 
         Returns:
-            List of [index, label] pairs for display.
+            HTML string for display.
         """
         start = time.time()
         print(
@@ -222,8 +223,14 @@ def wire_features_events(
         retriever = get_retriever()
         results = search_features(query, dataset, retriever, search_mode, int(k))
 
+        # Convert list of lists to DataFrame for HTMLTableElement
+        if results:
+            df = pd.DataFrame(results, columns=["Index", "Label"])
+        else:
+            df = None
+
         print(f"[TIMING] on_feature_search_change END: {time.time() - start:.3f}s")
-        return results
+        return HTMLTableElement(df).html()
 
     # Wire top N input
     components["top_n_input"].change(
