@@ -5,6 +5,7 @@ import pandas as pd
 
 from sae_scope.backend.interp_dataset import InterpEmbedDataset
 from sae_scope.backend.retriever.base import Retriever, SearchMode, SearchResult, TextSearchResult
+from sae_scope.backend.retriever.weaviate import WeaviateRetriever
 
 
 def _softmax(x: np.ndarray) -> np.ndarray:
@@ -111,7 +112,7 @@ class InterpEmbedRetriever:
             results.append(
                 TextSearchResult(
                     doc_index=int(idx),
-                    text=texts[idx][:200],  # Truncate to 200 chars for display
+                    text=texts[idx],
                     score=float(doc_scores[idx]),
                     column_data=col_data,
                     metadata={"feature_indices": feature_indices},
@@ -209,7 +210,74 @@ class InterpEmbedRetriever:
         # Add Score column at the end
         result_df["Score"] = [round(doc_scores[i], 6) for i in top_indices]
 
-        # Truncate text for display
-        result_df[text_field] = result_df[text_field].astype(str).str[:200]
+        return result_df
+
+    def ensure_texts_indexed(self, dataset_name: str) -> str:
+        """Ensure document texts are indexed in Weaviate.
+
+        Args:
+            dataset_name: Name of the dataset.
+
+        Returns:
+            Name of the texts collection.
+        """
+        if not isinstance(self._feature_retriever, WeaviateRetriever):
+            raise TypeError("Text search requires WeaviateRetriever")
+
+        texts = self._dataset._dataset.documents()
+        return self._feature_retriever.ensure_texts_indexed(dataset_name, texts)
+
+    def search_texts_by_query(
+        self,
+        query: str,
+        mode: SearchMode,
+        k: int = 10,
+        selected_columns: list[str] | None = None,
+        texts_collection: str | None = None,
+    ) -> pd.DataFrame:
+        """Direct text search using Weaviate on document texts.
+
+        Args:
+            query: Search query string.
+            mode: Search mode (lexical, vector, or hybrid).
+            k: Maximum number of results to return.
+            selected_columns: List of additional column names to include.
+            texts_collection: Name of the texts collection in Weaviate.
+
+        Returns:
+            DataFrame with columns: [selected_columns], text_field, Score.
+        """
+        if not isinstance(self._feature_retriever, WeaviateRetriever):
+            raise TypeError("Text search requires WeaviateRetriever")
+
+        if texts_collection is None:
+            raise ValueError("texts_collection must be provided")
+
+        # Search texts in Weaviate
+        results = self._feature_retriever.search_texts(
+            query, mode, k, texts_collection
+        )
+
+        if not results:
+            # Return empty DataFrame with correct columns
+            text_field = self._dataset.get_text_field()
+            columns = list(selected_columns) + [text_field] if selected_columns else [text_field]
+            columns.append("Score")
+            return pd.DataFrame(columns=columns)
+
+        # Get doc indices and scores
+        doc_indices = [idx for idx, _ in results]
+        scores = [score for _, score in results]
+
+        # Build column list: selected_columns + text_field
+        text_field = self._dataset.get_text_field()
+        columns = list(selected_columns) + [text_field] if selected_columns else [text_field]
+
+        # Get DataFrame with selected columns for matching rows
+        full_df = self._dataset.get_dataframe_with_columns(columns)
+        result_df = full_df.iloc[doc_indices].copy()
+
+        # Add Score column at the end
+        result_df["Score"] = [round(s, 6) for s in scores]
 
         return result_df

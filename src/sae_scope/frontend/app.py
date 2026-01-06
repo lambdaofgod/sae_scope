@@ -28,6 +28,7 @@ from sae_scope.frontend.components import (
 # Global retriever instances (initialized on first dataset load)
 _retriever: WeaviateRetriever | None = None
 _interp_retriever: InterpEmbedRetriever | None = None
+_texts_collection: str | None = None
 
 
 def get_retriever() -> WeaviateRetriever | None:
@@ -38,6 +39,11 @@ def get_retriever() -> WeaviateRetriever | None:
 def get_interp_retriever() -> InterpEmbedRetriever | None:
     """Return the current InterpEmbedRetriever instance."""
     return _interp_retriever
+
+
+def get_texts_collection() -> str | None:
+    """Return the current texts collection name."""
+    return _texts_collection
 
 
 def list_data_files() -> list[str]:
@@ -116,7 +122,7 @@ def create_app() -> gr.Blocks:
         # Wire tab events
         wire_scatterplot_events(scatterplot_components, state)
         wire_features_events(features_components, state, get_retriever)
-        wire_data_events(data_components, state)
+        wire_data_events(data_components, state, get_interp_retriever, get_texts_collection)
         wire_sae_retrieval_events(sae_retrieval_components, state, get_interp_retriever)
 
         # Dataset selection handler
@@ -134,7 +140,7 @@ def create_app() -> gr.Blocks:
             Returns:
                 Tuple of outputs for all connected components.
             """
-            global _retriever, _interp_retriever
+            global _retriever, _interp_retriever, _texts_collection
 
             start = time.time()
             print(
@@ -183,6 +189,8 @@ def create_app() -> gr.Blocks:
                 _retriever.ensure_indexed(filename, dataset.features.labels)
                 # Initialize InterpEmbedRetriever for SAE Retrieval tab
                 _interp_retriever = InterpEmbedRetriever(_retriever, dataset)
+                # Index document texts for text search in Data tab
+                _texts_collection = _interp_retriever.ensure_texts_indexed(filename)
                 print(f"[TIMING]   ensure_indexed: {time.time() - t0:.3f}s")
             except ConnectionError as e:
                 raise gr.Error(str(e)) from e

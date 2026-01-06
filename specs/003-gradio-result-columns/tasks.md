@@ -110,11 +110,11 @@
 
 ### Implementation for User Story 5
 
-- [ ] T024 [US5] Add search_texts_by_query() method to InterpEmbedRetriever in src/sae_scope/backend/retriever/interp_embed.py
-- [ ] T025 [US5] Ensure text collection indexed in Weaviate (add ensure_texts_indexed() or similar) in src/sae_scope/backend/retriever/interp_embed.py
-- [ ] T026 [US5] Refactor data_tab.py to use create_search_ui() component in src/sae_scope/frontend/components/data_tab.py
-- [ ] T027 [US5] Add gr.Accordion wrapper for existing DataFrame in data_tab.py in src/sae_scope/frontend/components/data_tab.py
-- [ ] T028 [US5] Wire text search events in data_tab.py to call retriever.search_texts_by_query() in src/sae_scope/frontend/components/data_tab.py
+- [x] T024 [US5] Add search_texts_by_query() method to InterpEmbedRetriever in src/sae_scope/backend/retriever/interp_embed.py
+- [x] T025 [US5] Ensure text collection indexed in Weaviate (add ensure_texts_indexed() or similar) in src/sae_scope/backend/retriever/interp_embed.py
+- [x] T026 [US5] Refactor data_tab.py to use create_search_ui() component in src/sae_scope/frontend/components/data_tab.py
+- [x] T027 [US5] Add gr.Accordion wrapper for existing DataFrame in data_tab.py in src/sae_scope/frontend/components/data_tab.py
+- [x] T028 [US5] Wire text search events in data_tab.py to call retriever.search_texts_by_query() in src/sae_scope/frontend/components/data_tab.py
 
 **Checkpoint**: Data tab has text search above collapsed DataFrame accordion
 
@@ -128,8 +128,8 @@
 
 ### Implementation for User Story 6
 
-- [ ] T029 [US6] Refactor features_tab.py to use create_search_ui() instead of inline search UI in src/sae_scope/frontend/components/features_tab.py
-- [ ] T030 [US6] Verify feature search functionality unchanged after refactor
+- [x] T029 [US6] Refactor features_tab.py to use create_search_ui() instead of inline search UI in src/sae_scope/frontend/components/features_tab.py
+- [x] T030 [US6] Verify feature search functionality unchanged after refactor
 
 **Checkpoint**: Both tabs use consistent search component pattern
 
@@ -139,8 +139,8 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T031 Run quickstart.md validation - test all search scenarios
-- [ ] T032 Verify both tabs have identical search UI layout
+- [x] T031 Run quickstart.md validation - test all search scenarios
+- [x] T032 Verify both tabs have identical search UI layout
 
 ---
 

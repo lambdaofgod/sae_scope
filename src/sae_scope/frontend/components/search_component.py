@@ -54,6 +54,8 @@ def create_search_ui(
     results = gr.Dataframe(
         label=results_label,
         interactive=False,
+        datatype="markdown",
+        wrap=True,
     )
 
     return {

@@ -77,6 +77,8 @@ def create_sae_retrieval_ui() -> dict[str, Any]:
             headers=["Index", "Text", "Score"],
             label="Matching Texts",
             interactive=False,
+            datatype="markdown",
+            wrap=True,
         )
 
     return {

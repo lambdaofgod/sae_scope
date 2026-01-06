@@ -96,6 +96,102 @@ class WeaviateRetriever(Retriever):
                     properties={"label": label, "feature_index": idx}
                 )
 
+    def ensure_texts_indexed(self, dataset_name: str, texts: list[str]) -> str:
+        """Ensure document texts are indexed for the given dataset.
+
+        Creates a separate collection for text search if it doesn't exist.
+
+        Args:
+            dataset_name: Name of the dataset
+            texts: List of document texts to index
+
+        Returns:
+            Name of the texts collection for later queries.
+        """
+        self._check_connection()
+        # Use a separate collection for texts (suffix with _texts)
+        base_name = self._derive_collection_name(dataset_name)
+        texts_collection_name = f"{base_name}Texts"
+
+        # Check if collection already exists
+        if self._client.collections.exists(texts_collection_name):
+            return texts_collection_name
+
+        # Create collection with text2vec-transformers vectorizer
+        self._client.collections.create(
+            name=texts_collection_name,
+            vectorizer_config=Configure.Vectorizer.text2vec_transformers(),
+            properties=[
+                Property(name="content", data_type=DataType.TEXT),
+                Property(
+                    name="doc_index",
+                    data_type=DataType.INT,
+                    skip_vectorization=True,
+                ),
+            ],
+        )
+
+        # Index all texts
+        collection = self._client.collections.get(texts_collection_name)
+        with collection.batch.dynamic() as batch:
+            for idx, text in enumerate(texts):
+                batch.add_object(
+                    properties={"content": text, "doc_index": idx}
+                )
+
+        return texts_collection_name
+
+    def search_texts(
+        self, query: str, mode: SearchMode, k: int, collection_name: str
+    ) -> list[tuple[int, float]]:
+        """Search document texts and return matching doc indices with scores.
+
+        Args:
+            query: Search query string
+            mode: Search mode (lexical, vector, or hybrid)
+            k: Maximum number of results to return
+            collection_name: Name of the texts collection to search
+
+        Returns:
+            List of (doc_index, score) tuples ordered by relevance
+        """
+        self._check_connection()
+        collection = self._client.collections.get(collection_name)
+
+        if mode == SearchMode.LEXICAL:
+            response = collection.query.bm25(
+                query=query,
+                limit=k,
+                return_metadata=MetadataQuery(score=True),
+            )
+        elif mode == SearchMode.VECTOR:
+            response = collection.query.near_text(
+                query=query,
+                limit=k,
+                return_metadata=MetadataQuery(distance=True),
+            )
+        elif mode == SearchMode.HYBRID:
+            response = collection.query.hybrid(
+                query=query,
+                limit=k,
+                alpha=0.5,
+                return_metadata=MetadataQuery(score=True),
+            )
+        else:
+            raise ValueError(f"Unknown search mode: {mode}")
+
+        results = []
+        for obj in response.objects:
+            # Extract score based on mode
+            if mode == SearchMode.VECTOR:
+                score = 1.0 - (obj.metadata.distance or 0.0)
+            else:
+                score = obj.metadata.score or 0.0
+
+            results.append((obj.properties["doc_index"], score))
+
+        return results
+
     def search(
         self, query: str, mode: SearchMode, k: int = 10
     ) -> list[SearchResult]:

@@ -7,6 +7,7 @@ import pandas as pd
 
 from sae_scope.backend.dataset import SAELensDataset
 from sae_scope.backend.retriever import SearchMode, WeaviateRetriever
+from sae_scope.frontend.components.search_component import create_search_ui
 
 
 def get_summary_stats(dataset: SAELensDataset | None) -> pd.DataFrame | None:
@@ -104,6 +105,7 @@ def create_features_ui() -> dict[str, Any]:
             summary_stats_df = gr.Dataframe(
                 label="Summary Statistics",
                 interactive=False,
+                wrap=True,
             )
             top_n_input = gr.Number(
                 label="Top N Features",
@@ -116,42 +118,27 @@ def create_features_ui() -> dict[str, Any]:
                 headers=["Index", "Label", "Frequency"],
                 label="Top N by Frequency (normalized 0-1)",
                 interactive=False,
+                wrap=True,
             )
             top_by_std = gr.Dataframe(
                 headers=["Index", "Label", "Std Dev"],
                 label="Top N by Std Dev",
                 interactive=False,
+                wrap=True,
             )
             top_by_max = gr.Dataframe(
                 headers=["Index", "Label", "Max Value"],
                 label="Top N by Max Value",
                 interactive=False,
+                wrap=True,
             )
 
         with gr.Accordion("Search Features", open=False):
-            search_mode_dropdown = gr.Dropdown(
-                label="Search Mode",
-                choices=["Lexical", "Vector", "Hybrid"],
-                value="Lexical",
-                interactive=True,
-            )
-            feature_search_input = gr.Textbox(
-                label="Search Features",
+            search_components = create_search_ui(
                 placeholder="Type to search feature labels...",
-            )
-            search_results_limit = gr.Number(
-                label="Max Results",
-                value=10,
-                minimum=1,
-                maximum=100,
-                step=1,
-                interactive=True,
-            )
-            feature_search_button = gr.Button("Search")
-            feature_results = gr.Dataframe(
-                headers=["Index", "Label"],
-                label="Feature Search Results",
-                interactive=False,
+                default_mode="Lexical",
+                default_k=10,
+                results_label="Feature Search Results",
             )
 
     return {
@@ -161,11 +148,12 @@ def create_features_ui() -> dict[str, Any]:
         "top_by_frequency": top_by_frequency,
         "top_by_std": top_by_std,
         "top_by_max": top_by_max,
-        "search_mode_dropdown": search_mode_dropdown,
-        "feature_search_input": feature_search_input,
-        "search_results_limit": search_results_limit,
-        "feature_search_button": feature_search_button,
-        "feature_results": feature_results,
+        # Search components (aliased for backward compatibility)
+        "search_mode_dropdown": search_components["search_mode"],
+        "feature_search_input": search_components["query"],
+        "search_results_limit": search_components["max_results"],
+        "feature_search_button": search_components["search_btn"],
+        "feature_results": search_components["results"],
     }
 
 
