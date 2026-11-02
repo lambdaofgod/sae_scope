@@ -29,7 +29,7 @@ def create_data_ui() -> dict[str, Any]:
         )
 
         with gr.Accordion("All Data", open=False):
-            dataframe = gr.Dataframe(label="Text Data", datatype="markdown", wrap=True)
+            dataframe = gr.HTML(label="Text Data")
 
     return {
         "tab": tab,
@@ -63,7 +63,7 @@ def wire_data_events(
     def update_data_table(
         dataset: SAELensDataset | None,
         selected_columns: list[str],
-    ) -> object:
+    ) -> str:
         """Update data table with dataset texts and selected columns."""
         start = time.time()
         print("[TIMING] update_data_table START")
@@ -72,7 +72,7 @@ def wire_data_events(
             print(
                 f"[TIMING] update_data_table END (no dataset): {time.time() - start:.3f}s"
             )
-            return None
+            return HTMLTableElement(None).html()
 
         t0 = time.time()
         # Get the text field name and build column list
@@ -85,7 +85,7 @@ def wire_data_events(
         print(f"[TIMING]   get_dataframe_with_columns: {time.time() - t0:.3f}s")
 
         print(f"[TIMING] update_data_table END: {time.time() - start:.3f}s")
-        return result
+        return HTMLTableElement(result).html()
 
     def on_text_search(
         query: str,

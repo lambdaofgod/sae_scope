@@ -1,5 +1,6 @@
 """Gradio application entry point for SAE Scope dashboard."""
 
+import sys
 import time
 from pathlib import Path
 
@@ -11,6 +12,7 @@ from sae_scope.backend.retriever import (
     WeaviateRetriever,
 )
 from sae_scope.frontend.components import (
+    HTMLTableElement,
     create_data_ui,
     create_features_ui,
     create_sae_retrieval_ui,
@@ -24,26 +26,6 @@ from sae_scope.frontend.components import (
     wire_sae_retrieval_events,
     wire_scatterplot_events,
 )
-
-# Global retriever instances (initialized on first dataset load)
-_retriever: WeaviateRetriever | None = None
-_interp_retriever: InterpEmbedRetriever | None = None
-_texts_collection: str | None = None
-
-
-def get_retriever() -> WeaviateRetriever | None:
-    """Return the current WeaviateRetriever instance."""
-    return _retriever
-
-
-def get_interp_retriever() -> InterpEmbedRetriever | None:
-    """Return the current InterpEmbedRetriever instance."""
-    return _interp_retriever
-
-
-def get_texts_collection() -> str | None:
-    """Return the current texts collection name."""
-    return _texts_collection
 
 
 def list_data_files() -> list[str]:
@@ -59,13 +41,28 @@ def list_data_files() -> list[str]:
     return sorted([f.name for f in data_dir.glob("*.pkl")])
 
 
-def create_app() -> gr.Blocks:
+def create_app(retriever: WeaviateRetriever) -> gr.Blocks:
     """
     Create and configure the Gradio application.
+
+    Args:
+        retriever: Pre-initialized WeaviateRetriever instance.
 
     Returns:
         Configured gr.Blocks application.
     """
+    interp_retriever: InterpEmbedRetriever | None = None
+    texts_collection: str | None = None
+
+    def _get_retriever() -> WeaviateRetriever:
+        return retriever
+
+    def _get_interp_retriever() -> InterpEmbedRetriever | None:
+        return interp_retriever
+
+    def _get_texts_collection() -> str | None:
+        return texts_collection
+
     with gr.Blocks(title="SAE Scope Dashboard") as app:
         # Shared State
         current_dataset: gr.State = gr.State(value=None)
@@ -121,9 +118,9 @@ def create_app() -> gr.Blocks:
 
         # Wire tab events
         wire_scatterplot_events(scatterplot_components, state)
-        wire_features_events(features_components, state, get_retriever)
-        wire_data_events(data_components, state, get_interp_retriever, get_texts_collection)
-        wire_sae_retrieval_events(sae_retrieval_components, state, get_interp_retriever)
+        wire_features_events(features_components, state, _get_retriever)
+        wire_data_events(data_components, state, _get_interp_retriever, _get_texts_collection)
+        wire_sae_retrieval_events(sae_retrieval_components, state, _get_interp_retriever)
 
         # Dataset selection handler
         def on_dataset_select(
@@ -140,7 +137,7 @@ def create_app() -> gr.Blocks:
             Returns:
                 Tuple of outputs for all connected components.
             """
-            global _retriever, _interp_retriever, _texts_collection
+            nonlocal interp_retriever, texts_collection
 
             start = time.time()
             print(
@@ -184,13 +181,11 @@ def create_app() -> gr.Blocks:
             # Initialize retrievers and index feature labels
             try:
                 t0 = time.time()
-                if _retriever is None:
-                    _retriever = WeaviateRetriever()
-                _retriever.ensure_indexed(filename, dataset.features.labels)
+                retriever.ensure_indexed(filename, dataset.features.labels)
                 # Initialize InterpEmbedRetriever for SAE Retrieval tab
-                _interp_retriever = InterpEmbedRetriever(_retriever, dataset)
+                interp_retriever = InterpEmbedRetriever(retriever, dataset)
                 # Index document texts for text search in Data tab
-                _texts_collection = _interp_retriever.ensure_texts_indexed(filename)
+                texts_collection = interp_retriever.ensure_texts_indexed(filename)
                 print(f"[TIMING]   ensure_indexed: {time.time() - t0:.3f}s")
             except ConnectionError as e:
                 raise gr.Error(str(e)) from e
@@ -209,7 +204,7 @@ def create_app() -> gr.Blocks:
 
             # Get data table
             t0 = time.time()
-            data_df = dataset.get_text_dataframe()
+            data_df = HTMLTableElement(dataset.get_text_dataframe()).html()
             print(f"[TIMING]   get_text_dataframe: {time.time() - t0:.3f}s")
 
             # Get feature statistics
@@ -219,7 +214,7 @@ def create_app() -> gr.Blocks:
             top_max = get_top_n_features(dataset, 10, "max")
 
             # Get initial feature results (first 10)
-            feature_list = search_features("", dataset, _retriever)
+            feature_list = search_features("", dataset, retriever)
 
             # Get available columns for column selector (excluding text field)
             all_columns = dataset.get_column_names()
@@ -278,13 +273,13 @@ def create_app() -> gr.Blocks:
         def on_apply_columns(
             selected: list[str],
             dataset: InterpEmbedDataset | None,
-        ) -> tuple[list[str], object]:
+        ) -> tuple[list[str], str]:
             """Update selected_columns state and refresh Data tab when user clicks Apply."""
             print(f"[INFO] Applied columns: {selected}")
 
             # Refresh Data tab with new columns
             if dataset is None:
-                return selected, None
+                return selected, HTMLTableElement(None).html()
 
             text_field = dataset.get_text_field()
             # Selected columns come BEFORE text column
@@ -292,7 +287,7 @@ def create_app() -> gr.Blocks:
             columns_to_show.append(text_field)
 
             data_df = dataset.get_dataframe_with_columns(columns_to_show)
-            return selected, data_df
+            return selected, HTMLTableElement(data_df).html()
 
         apply_columns_btn.click(
             fn=on_apply_columns,
@@ -305,7 +300,13 @@ def create_app() -> gr.Blocks:
 
 def main() -> None:
     """Launch the Gradio application."""
-    app = create_app()
+    try:
+        retriever = WeaviateRetriever()
+    except Exception as e:
+        print(f"Startup check failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    app = create_app(retriever)
     app.launch()
 
 

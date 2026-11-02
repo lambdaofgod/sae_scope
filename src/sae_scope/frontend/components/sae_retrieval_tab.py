@@ -6,6 +6,7 @@ import gradio as gr
 
 from sae_scope.backend.dataset import SAELensDataset
 from sae_scope.backend.retriever import SearchMode
+from sae_scope.frontend.components.html_table import HTMLTableElement
 
 
 def create_sae_retrieval_ui() -> dict[str, Any]:
@@ -73,13 +74,7 @@ def create_sae_retrieval_ui() -> dict[str, Any]:
                 interactive=True,
             )
         find_texts_btn = gr.Button("Find Texts", interactive=False)
-        text_results = gr.Dataframe(
-            headers=["Index", "Text", "Score"],
-            label="Matching Texts",
-            interactive=False,
-            datatype="markdown",
-            wrap=True,
-        )
+        text_results = gr.HTML(label="Matching Texts")
 
     return {
         "tab": tab,
@@ -249,7 +244,7 @@ def wire_sae_retrieval_events(
         )
 
         print(f"[TIMING] on_find_texts END: {time.time() - start:.3f}s")
-        return gr.update(value=result_df)
+        return HTMLTableElement(result_df).html()
 
     # Wire SAE Retrieval tab - Find Latents button
     components["find_latents_btn"].click(
